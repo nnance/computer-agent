@@ -1,0 +1,28 @@
+{
+	"name": "computer-agent",
+	"version": "0.0.1",
+	"description": "General purpose computer AI agent",
+	"main": "./dist/index.js",
+	"type": "module",
+	"scripts": {
+		"build": "tsc",
+		"format": "biome check && biome format",
+		"start": "node ./dist/index.js",
+		"prestart": "npm run build",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"keywords": [
+		"ai",
+		"genai",
+		"agent",
+		"agentic",
+		"anthropic"
+	],
+	"author": "Nick Nance",
+	"license": "MIT",
+	"devDependencies": {
+		"@biomejs/biome": "^2.2.5",
+		"@types/node": "^24.7.2",
+		"typescript": "^5.9.3"
+	}
+}
