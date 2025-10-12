@@ -24,5 +24,11 @@
 		"@biomejs/biome": "^2.2.5",
 		"@types/node": "^24.7.2",
 		"typescript": "^5.9.3"
+	},
+	"dependencies": {
+		"@anthropic-ai/sdk": "^0.65.0",
+		"@clack/prompts": "^0.11.0",
+		"dotenv": "^17.2.3",
+		"zod": "^4.1.12"
 	}
 }
