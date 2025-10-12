@@ -1,6 +1,9 @@
 import "dotenv/config";
 import Anthropic from "@anthropic-ai/sdk";
 import { isCancel, cancel, text, log, spinner } from "@clack/prompts";
+import { getWeather } from "./weather.js";
+
+const tools = [getWeather];
 
 function stopReason(reason: Anthropic.Messages.StopReason | null): string {
 	switch (reason) {
@@ -46,7 +49,8 @@ async function main() {
 		// Call the Anthropic API
 		const msg = await anthropic.messages.create({
 			model: "claude-sonnet-4-5",
-			max_tokens: 1000,
+			tools: tools.map((t) => t.tool),
+			max_tokens: 1024,
 			messages,
 		});
 		messages.push({ role: "assistant", content: msg.content });
