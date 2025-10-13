@@ -1,15 +1,9 @@
 import "dotenv/config";
 import Anthropic from "@anthropic-ai/sdk";
 import { isCancel, cancel, text, log, spinner } from "@clack/prompts";
-import {
-	createNote,
-	editNote,
-	getNoteContent,
-	listNotes,
-	searchNotes,
-} from "./appleNotesTool.js";
+import { appleNotesTools } from "./appleNotesTool.js";
 
-const tools = [searchNotes, createNote, editNote, listNotes, getNoteContent];
+const tools = [...appleNotesTools];
 const anthropic = new Anthropic();
 const indicator = spinner();
 
@@ -39,7 +33,7 @@ async function processToolCall(
 ): Promise<Anthropic.ToolResultBlockParam> {
 	const tool = tools.find((t) => t.tool.name === toolUse.name);
 	if (!tool) {
-		log.error(`\nUnknown tool: ${toolUse.name}`);
+		log.error(`Unknown tool: ${toolUse.name}`);
 		return {
 			type: "tool_result",
 			tool_use_id: toolUse.id,
@@ -68,6 +62,43 @@ async function processToolCall(
 	}
 }
 
+async function sendMessage(messages: Anthropic.Messages.MessageParam[]) {
+	indicator.start("Thinking...");
+
+	// Call the Anthropic API
+	const msg = await anthropic.messages.create({
+		model: "claude-sonnet-4-5",
+		tools: tools.map((t) => t.tool),
+		max_tokens: 1024,
+		messages,
+	});
+	messages.push({ role: "assistant", content: msg.content });
+	indicator.stop(stopReason(msg.stop_reason));
+
+	// Process the response
+	const toolResults: Anthropic.ToolResultBlockParam[] = [];
+
+	for (const block of msg.content) {
+		if (block.type === "text") {
+			log.message(block.text);
+		} else if (block.type === "tool_use") {
+			indicator.start(`Using tool: ${block.name}`);
+			const result = await processToolCall(block);
+			indicator.stop(`Tool ${block.name}: ${result ? "Success" : "Failed"}.`);
+			toolResults.push(result);
+		}
+	}
+
+	if (toolResults.length > 0) {
+		messages.push({
+			role: "user",
+			content: toolResults,
+		});
+	}
+
+	return msg;
+}
+
 async function main() {
 	let value = await text({
 		message: "How can I help you?",
@@ -85,41 +116,9 @@ async function main() {
 
 		let isRunning = true;
 		while (isRunning) {
-			indicator.start("Thinking...");
+			const msg = await sendMessage(messages);
 
-			// Call the Anthropic API
-			const msg = await anthropic.messages.create({
-				model: "claude-sonnet-4-5",
-				tools: tools.map((t) => t.tool),
-				max_tokens: 1024,
-				messages,
-			});
-			messages.push({ role: "assistant", content: msg.content });
-			indicator.stop(stopReason(msg.stop_reason));
-
-			// Process the response
-			const toolResults: Anthropic.ToolResultBlockParam[] = [];
-
-			for (const block of msg.content) {
-				if (block.type === "text") {
-					log.message(block.text);
-				} else if (block.type === "tool_use") {
-					indicator.start(`Using tool: ${block.name}`);
-					const result = await processToolCall(block);
-					indicator.stop(
-						`Tool ${block.name}: ${result ? "Success" : "Failed"}.`,
-					);
-					toolResults.push(result);
-				}
-			}
-
-			if (toolResults.length > 0) {
-				messages.push({
-					role: "user",
-					content: toolResults,
-				});
-			}
-
+			// If the message didn't stop because of tool use, we're done
 			if (msg.stop_reason !== "tool_use") {
 				isRunning = false;
 			}

@@ -267,3 +267,11 @@ export const getNoteContent: RunnableTool<GetContentInput, string> = {
 		return result;
 	},
 };
+
+export const appleNotesTools = [
+	searchNotes,
+	createNote,
+	editNote,
+	listNotes,
+	getNoteContent,
+];
