@@ -15,6 +15,10 @@ npm install              # Install dependencies
 npm run build           # Compile TypeScript to dist/
 npm start               # Build and run (automatically runs build via prestart)
 npm run format          # Run Biome linter and formatter
+npm test                # Run tests with Vitest
+npm run test:watch      # Run tests in watch mode
+npm run test:ui         # Run tests with interactive UI
+npm run test:coverage   # Run tests with coverage report
 ```
 
 **Important**: The project uses ES modules (`"type": "module"`). All imports must include `.js` extensions, even though source files are `.ts`.
@@ -160,9 +164,21 @@ export const myTools = [myTool];
 - macOS-only (AppleScript dependencies)
 - Node.js with ES modules support
 
+### Testing
+- **Framework**: Vitest 3.x with TypeScript support
+- **Test location**: Place tests in `src/__tests__/` directory with `.test.ts` or `.spec.ts` extensions
+- **Configuration**: [vitest.config.ts](vitest.config.ts) configures test environment, coverage, and globals
+- **Commands**:
+  - `npm test`: Run all tests once
+  - `npm run test:watch`: Run tests in watch mode (re-runs on file changes)
+  - `npm run test:ui`: Open interactive UI for test exploration
+  - `npm run test:coverage`: Generate coverage reports (text, JSON, HTML)
+- **Coverage**: V8 provider with exclusions for `node_modules/`, `dist/`, config files, and type definitions
+- **Test timeout**: 10 seconds per test (configurable in vitest.config.ts)
+- **Globals**: `describe`, `it`, `expect` are available globally (no imports needed)
+
 ### Current Limitations
 - Max tokens: 1024 (hardcoded in [index.ts](src/index.ts:102))
-- No test framework configured
 - Synchronous AppleScript execution (no parallelization)
 - No streaming response support
 - Context file path is hardcoded to `./tmp/ASSISTANT.md`
@@ -191,6 +207,13 @@ export const myTools = [myTool];
 1. Run `npm run build` to see full TypeScript errors
 2. Remember to use `.js` extensions in imports
 3. Ensure Zod schemas use `z.infer<>` for type inference
+
+**Test failures:**
+1. Run `npm test` to see detailed test output and error messages
+2. Use `npm run test:watch` for rapid iteration on failing tests
+3. Check test file imports include `.js` extensions (ES modules requirement)
+4. Verify async tests use `async/await` properly
+5. Use `npm run test:ui` for interactive debugging and test exploration
 
 ## Security Considerations
 
