@@ -3,8 +3,13 @@ import Anthropic from "@anthropic-ai/sdk";
 import { isCancel, text, log, spinner } from "@clack/prompts";
 import { appleNotesTools } from "./appleNotesTool.js";
 import { appleCalendarTools } from "./appleCalendarTool.js";
+import { appleContactsTools } from "./appleContactsTool.js";
 
-const tools = [...appleNotesTools, ...appleCalendarTools];
+const tools = [
+	...appleNotesTools,
+	...appleCalendarTools,
+	...appleContactsTools,
+];
 const anthropic = new Anthropic();
 const indicator = spinner();
 
