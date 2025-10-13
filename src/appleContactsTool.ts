@@ -301,29 +301,28 @@ export const createContact: RunnableTool<CreateContactInput, string> = {
 const ListContactsInputSchema = z.object({});
 export type ListContactsInput = z.infer<typeof ListContactsInputSchema>;
 
-export const listContacts: RunnableTool<ListContactsInput, Contact[] | null> =
-	{
-		tool: {
-			name: "listContacts",
-			description: "List all contacts in the Apple Contacts app.",
-			input_schema: {
-				type: "object",
-				properties: {},
-			},
+export const listContacts: RunnableTool<ListContactsInput, Contact[] | null> = {
+	tool: {
+		name: "listContacts",
+		description: "List all contacts in the Apple Contacts app.",
+		input_schema: {
+			type: "object",
+			properties: {},
 		},
-		input: ListContactsInputSchema,
-		run: async () => {
-			const manager = new ContactsManager();
-			const result = await manager.listContacts();
-			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
-			if (!result) {
-				console.log(`Error: No contacts found or error occurred.`);
-			} else {
-				console.log(`Found ${result.length} contact(s).`);
-			}
-			return result;
-		},
-	};
+	},
+	input: ListContactsInputSchema,
+	run: async () => {
+		const manager = new ContactsManager();
+		const result = await manager.listContacts();
+		console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+		if (!result) {
+			console.log(`Error: No contacts found or error occurred.`);
+		} else {
+			console.log(`Found ${result.length} contact(s).`);
+		}
+		return result;
+	},
+};
 
 const GetContactInputSchema = z.object({
 	contactName: z.string().describe("Name of the contact to retrieve"),
