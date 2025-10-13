@@ -1,9 +1,10 @@
 import "dotenv/config";
 import Anthropic from "@anthropic-ai/sdk";
-import { isCancel, text, log, spinner } from "@clack/prompts";
-import { appleNotesTools } from "./appleNotesTool.js";
+import { isCancel, log, spinner, text } from "@clack/prompts";
 import { appleCalendarTools } from "./appleCalendarTool.js";
 import { appleContactsTools } from "./appleContactsTool.js";
+import { appleNotesTools } from "./appleNotesTool.js";
+import { bashTool } from "./bashTool.js";
 import { handleView, textEditorTool } from "./textEditorTool.js";
 
 const tools = [
@@ -11,6 +12,7 @@ const tools = [
 	...appleCalendarTools,
 	...appleContactsTools,
 	textEditorTool,
+	bashTool,
 ];
 const contextFile = "./tmp/ASSISTANT.md";
 const anthropic = new Anthropic();
@@ -22,11 +24,11 @@ function loadContext(filePath: string): string {
 	log.info(`Loaded context: ${contextInfo.length} characters.`);
 
 	const systemPrompt = `
-		You are a helpful assistant that can use tools to interact with the user's Apple Notes, Calendar, Contacts, and local text files. Use the provided tools to fulfill user requests as needed.
-		
+		You are a helpful assistant that can use tools to interact with the user's Apple Notes, Calendar, Contacts, local text files, and execute bash commands. Use the provided tools to fulfill user requests as needed.
+
 		Available context:
 		${contextInfo}
-		
+
 		When using tools, ensure the input is correctly formatted as JSON. If a tool returns an error or no result, inform the user appropriately.
 		`;
 	return systemPrompt;

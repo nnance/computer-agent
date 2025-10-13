@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { RunnableTool } from "./types.js";
 import { z } from "zod";
+import type { RunnableTool } from "./types.js";
 
 interface EditorResult {
 	success: boolean;
