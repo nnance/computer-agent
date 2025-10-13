@@ -1,6 +1,6 @@
 import "dotenv/config";
 import Anthropic from "@anthropic-ai/sdk";
-import { isCancel, cancel, text, log, spinner } from "@clack/prompts";
+import { isCancel, text, log, spinner } from "@clack/prompts";
 import { appleNotesTools } from "./appleNotesTool.js";
 
 const tools = [...appleNotesTools];
@@ -113,13 +113,9 @@ async function main() {
 	const messages: Anthropic.Messages.MessageParam[] = [];
 
 	while (!isCancel(value)) {
-		if (isCancel(value)) {
-			cancel("Operation cancelled.");
-			process.exit(0);
-		}
-
 		messages.push({ role: "user", content: value });
 
+		// Send the message to the model and get a final response
 		const newMessages = await sendMessage(messages);
 		messages.push(...newMessages);
 
