@@ -2,8 +2,9 @@ import "dotenv/config";
 import Anthropic from "@anthropic-ai/sdk";
 import { isCancel, text, log, spinner } from "@clack/prompts";
 import { appleNotesTools } from "./appleNotesTool.js";
+import { appleCalendarTools } from "./appleCalendarTool.js";
 
-const tools = [...appleNotesTools];
+const tools = [...appleNotesTools, ...appleCalendarTools];
 const anthropic = new Anthropic();
 const indicator = spinner();
 
