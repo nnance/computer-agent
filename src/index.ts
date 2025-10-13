@@ -4,14 +4,34 @@ import { isCancel, text, log, spinner } from "@clack/prompts";
 import { appleNotesTools } from "./appleNotesTool.js";
 import { appleCalendarTools } from "./appleCalendarTool.js";
 import { appleContactsTools } from "./appleContactsTool.js";
+import { handleView, textEditorTool } from "./textEditorTool.js";
 
 const tools = [
 	...appleNotesTools,
 	...appleCalendarTools,
 	...appleContactsTools,
+	textEditorTool,
 ];
+const contextFile = "./tmp/ASSISTANT.md";
 const anthropic = new Anthropic();
 const indicator = spinner();
+
+function loadContext(filePath: string): string {
+	const contextInfo =
+		handleView(contextFile)?.content || "No context available";
+
+	log.info(`Loaded context: ${contextInfo.length} characters.`);
+
+	const systemPrompt = `
+		You are a helpful assistant that can use tools to interact with the user's Apple Notes, Calendar, Contacts, and local text files. Use the provided tools to fulfill user requests as needed.
+		
+		Available context:
+		${contextInfo}
+		
+		When using tools, ensure the input is correctly formatted as JSON. If a tool returns an error or no result, inform the user appropriately.
+		`;
+	return systemPrompt;
+}
 
 function stopReason(reason: Anthropic.Messages.StopReason | null): string {
 	switch (reason) {
@@ -68,7 +88,10 @@ async function processToolCall(
 	}
 }
 
-async function sendMessage(context: Anthropic.Messages.MessageParam[]) {
+async function sendMessage(
+	system: string,
+	context: Anthropic.Messages.MessageParam[],
+) {
 	const messages: Anthropic.Messages.MessageParam[] = [];
 	indicator.start("Thinking...");
 
@@ -76,6 +99,7 @@ async function sendMessage(context: Anthropic.Messages.MessageParam[]) {
 	const msg = await anthropic.messages.create({
 		model: "claude-sonnet-4-5",
 		tools: tools.map((t) => t.tool),
+		system,
 		max_tokens: 1024,
 		messages: [...context],
 	});
@@ -104,7 +128,7 @@ async function sendMessage(context: Anthropic.Messages.MessageParam[]) {
 	}
 
 	if (msg.stop_reason === "tool_use") {
-		const newMessages = await sendMessage([...context, ...messages]);
+		const newMessages = await sendMessage(system, [...context, ...messages]);
 		messages.push(...newMessages);
 	}
 
@@ -112,17 +136,19 @@ async function sendMessage(context: Anthropic.Messages.MessageParam[]) {
 }
 
 async function main() {
+	const messages: Anthropic.Messages.MessageParam[] = [];
+
+	const systemPrompt = loadContext(contextFile);
+
 	let value = await text({
 		message: "How can I help you?",
 	});
-
-	const messages: Anthropic.Messages.MessageParam[] = [];
 
 	while (!isCancel(value)) {
 		messages.push({ role: "user", content: value });
 
 		// Send the message to the model and get a final response
-		const newMessages = await sendMessage(messages);
+		const newMessages = await sendMessage(systemPrompt, messages);
 		messages.push(...newMessages);
 
 		// Prompt for the next input
