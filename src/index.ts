@@ -17,8 +17,7 @@ const anthropic = new Anthropic();
 const indicator = spinner();
 
 function loadContext(filePath: string): string {
-	const contextInfo =
-		handleView(contextFile)?.content || "No context available";
+	const contextInfo = handleView(filePath)?.content || "No context available";
 
 	log.info(`Loaded context: ${contextInfo.length} characters.`);
 

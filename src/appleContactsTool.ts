@@ -9,6 +9,7 @@ export interface Contact {
 	emails: string[];
 	phones: string[];
 	organization?: string;
+	birthday?: string;
 }
 
 class ContactsManager {
@@ -52,7 +53,13 @@ class ContactsManager {
               end if
               set phoneList to phoneList & (value of ph)
             end repeat
-            set contactInfo to contactInfo & phoneList & "|||" & (organization of p)
+            set contactInfo to contactInfo & phoneList & "|||" & (organization of p) & "|||"
+            try
+              set birthdayValue to birth date of p
+              set contactInfo to contactInfo & (birthdayValue as string)
+            on error
+              set contactInfo to contactInfo & ""
+            end try
             set searchResults to searchResults & contactInfo
           end if
         end repeat
@@ -64,7 +71,7 @@ class ContactsManager {
 		if (result) {
 			const contactStrings = result.split(":::");
 			const contacts: Contact[] = contactStrings.map((contactStr) => {
-				const [id, name, emailsStr, phonesStr, organization] =
+				const [id, name, emailsStr, phonesStr, organization, birthday] =
 					contactStr.split("|||");
 				return {
 					id,
@@ -72,6 +79,7 @@ class ContactsManager {
 					emails: emailsStr ? emailsStr.split(",") : [],
 					phones: phonesStr ? phonesStr.split(",") : [],
 					organization: organization || undefined,
+					birthday: birthday || undefined,
 				} as Contact;
 			});
 			return contacts;
@@ -84,12 +92,14 @@ class ContactsManager {
 		email?: string,
 		phone?: string,
 		organization?: string,
+		birthday?: string,
 	) {
 		const script = `
       tell application "Contacts"
         set newPerson to make new person with properties {name:"${name}"${organization ? `, organization:"${organization}"` : ""}}
         ${email ? `make new email at end of emails of newPerson with properties {value:"${email}"}` : ""}
         ${phone ? `make new phone at end of phones of newPerson with properties {value:"${phone}"}` : ""}
+        ${birthday ? `set birth date of newPerson to date "${birthday}"` : ""}
         save
         return "Contact created: ${name}"
       end tell
@@ -123,7 +133,13 @@ class ContactsManager {
             end if
             set phoneList to phoneList & (value of ph)
           end repeat
-          set contactInfo to contactInfo & phoneList & "|||" & (organization of p)
+          set contactInfo to contactInfo & phoneList & "|||" & (organization of p) & "|||"
+          try
+            set birthdayValue to birth date of p
+            set contactInfo to contactInfo & (birthdayValue as string)
+          on error
+            set contactInfo to contactInfo & ""
+          end try
           set contactList to contactList & contactInfo
         end repeat
         return contactList
@@ -134,7 +150,7 @@ class ContactsManager {
 		if (result) {
 			const contactStrings = result.split(":::");
 			const contacts: Contact[] = contactStrings.map((contactStr) => {
-				const [id, name, emailsStr, phonesStr, organization] =
+				const [id, name, emailsStr, phonesStr, organization, birthday] =
 					contactStr.split("|||");
 				return {
 					id,
@@ -142,6 +158,7 @@ class ContactsManager {
 					emails: emailsStr ? emailsStr.split(",") : [],
 					phones: phonesStr ? phonesStr.split(",") : [],
 					organization: organization || undefined,
+					birthday: birthday || undefined,
 				} as Contact;
 			});
 			return contacts;
@@ -170,7 +187,13 @@ class ContactsManager {
               end if
               set phoneList to phoneList & (value of ph)
             end repeat
-            set contactInfo to contactInfo & phoneList & "|||" & (organization of p)
+            set contactInfo to contactInfo & phoneList & "|||" & (organization of p) & "|||"
+            try
+              set birthdayValue to birth date of p
+              set contactInfo to contactInfo & (birthdayValue as string)
+            on error
+              set contactInfo to contactInfo & ""
+            end try
             return contactInfo
           end if
         end repeat
@@ -180,7 +203,7 @@ class ContactsManager {
 
 		const result = await this.executeAppleScript(script);
 		if (result && !result.includes("Contact not found")) {
-			const [id, name, emailsStr, phonesStr, organization] =
+			const [id, name, emailsStr, phonesStr, organization, birthday] =
 				result.split("|||");
 			return {
 				id,
@@ -188,6 +211,7 @@ class ContactsManager {
 				emails: emailsStr ? emailsStr.split(",") : [],
 				phones: phonesStr ? phonesStr.split(",") : [],
 				organization: organization || undefined,
+				birthday: birthday || undefined,
 			} as Contact;
 		}
 		return null;
@@ -231,6 +255,12 @@ const CreateContactInputSchema = z.object({
 	email: z.string().optional().describe("Email address of the contact"),
 	phone: z.string().optional().describe("Phone number of the contact"),
 	organization: z.string().optional().describe("Organization of the contact"),
+	birthday: z
+		.string()
+		.optional()
+		.describe(
+			"Birthday of the contact in a format AppleScript understands (e.g., 'January 15, 1990')",
+		),
 });
 export type CreateContactInput = z.infer<typeof CreateContactInputSchema>;
 
@@ -245,13 +275,20 @@ export const createContact: RunnableTool<CreateContactInput, string> = {
 				email: { type: "string", nullable: true },
 				phone: { type: "string", nullable: true },
 				organization: { type: "string", nullable: true },
+				birthday: { type: "string", nullable: true },
 			},
 		},
 	},
 	input: CreateContactInputSchema,
-	run: async ({ name, email, phone, organization }) => {
+	run: async ({ name, email, phone, organization, birthday }) => {
 		const manager = new ContactsManager();
-		const result = await manager.createContact(name, email, phone, organization);
+		const result = await manager.createContact(
+			name,
+			email,
+			phone,
+			organization,
+			birthday,
+		);
 		console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
 		if (!result) {
 			console.log(`Error creating contact.`);
