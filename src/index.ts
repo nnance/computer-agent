@@ -1,9 +1,15 @@
 import "dotenv/config";
 import Anthropic from "@anthropic-ai/sdk";
 import { isCancel, cancel, text, log, spinner } from "@clack/prompts";
-import { getWeather } from "./weather.js";
+import {
+	createNote,
+	editNote,
+	getNoteContent,
+	listNotes,
+	searchNotes,
+} from "./appleNotesTool.js";
 
-const tools = [getWeather];
+const tools = [searchNotes, createNote, editNote, listNotes, getNoteContent];
 const anthropic = new Anthropic();
 const indicator = spinner();
 
