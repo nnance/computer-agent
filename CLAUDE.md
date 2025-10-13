@@ -200,4 +200,11 @@ This is a defensive productivity tool. Do not add features for:
 - Unauthorized system access
 - Any malicious capabilities
 
+## Additional Resources
+
+- [Anthropic Claude SDK](https://github.com/anthropics/anthropic-sdk-typescript)
+- [Zod Documentation](https://zod.dev/)
+- [AppleScript Language Guide](https://developer.apple.com/library/archive/documentation/AppleScript/Conceptual/AppleScriptLangGuide/)
+- [TypeScript Handbook](https://www.typescriptlang.org/docs/handbook/intro.html)
+
 Focus on legitimate personal productivity and automation use cases.
