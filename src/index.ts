@@ -62,7 +62,8 @@ async function processToolCall(
 	}
 }
 
-async function sendMessage(messages: Anthropic.Messages.MessageParam[]) {
+async function sendMessage(context: Anthropic.Messages.MessageParam[]) {
+	const messages: Anthropic.Messages.MessageParam[] = [];
 	indicator.start("Thinking...");
 
 	// Call the Anthropic API
@@ -70,7 +71,7 @@ async function sendMessage(messages: Anthropic.Messages.MessageParam[]) {
 		model: "claude-sonnet-4-5",
 		tools: tools.map((t) => t.tool),
 		max_tokens: 1024,
-		messages,
+		messages: [...context],
 	});
 	messages.push({ role: "assistant", content: msg.content });
 	indicator.stop(stopReason(msg.stop_reason));
@@ -96,7 +97,12 @@ async function sendMessage(messages: Anthropic.Messages.MessageParam[]) {
 		});
 	}
 
-	return msg;
+	if (msg.stop_reason === "tool_use") {
+		const newMessages = await sendMessage([...context, ...messages]);
+		messages.push(...newMessages);
+	}
+
+	return messages;
 }
 
 async function main() {
@@ -114,15 +120,8 @@ async function main() {
 
 		messages.push({ role: "user", content: value });
 
-		let isRunning = true;
-		while (isRunning) {
-			const msg = await sendMessage(messages);
-
-			// If the message didn't stop because of tool use, we're done
-			if (msg.stop_reason !== "tool_use") {
-				isRunning = false;
-			}
-		}
+		const newMessages = await sendMessage(messages);
+		messages.push(...newMessages);
 
 		// Prompt for the next input
 		value = await text({
