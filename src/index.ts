@@ -6,13 +6,17 @@ import { appleContactsTools } from "./appleContactsTool.js";
 import { appleNotesTools } from "./appleNotesTool.js";
 import { bashTool } from "./bashTool.js";
 import { handleView, textEditorTool } from "./textEditorTool.js";
+import { webSearchTool } from "./webSearchTool.js";
+import type { Tool } from "./types.js";
+import { isRunnableTool } from "./types.js";
 
-const tools = [
+const tools: Tool[] = [
 	...appleNotesTools,
 	...appleCalendarTools,
 	...appleContactsTools,
 	textEditorTool,
 	bashTool,
+	webSearchTool,
 ];
 const contextFile = "./tmp/ASSISTANT.md";
 const anthropic = new Anthropic();
@@ -24,12 +28,14 @@ function loadContext(filePath: string): string {
 	log.info(`Loaded context: ${contextInfo.length} characters.`);
 
 	const systemPrompt = `
-		You are a helpful assistant that can use tools to interact with the user's Apple Notes, Calendar, Contacts, local text files, and execute bash commands. Use the provided tools to fulfill user requests as needed.
+		You are a helpful assistant that can use tools to interact with the user's Apple Notes, Calendar, Contacts, local text files, execute bash commands, and search the web. Use the provided tools to fulfill user requests as needed.
 
 		Available context:
 		${contextInfo}
 
 		When using tools, ensure the input is correctly formatted as JSON. If a tool returns an error or no result, inform the user appropriately.
+
+		When using web search, you can autonomously search for current information, recent events, or data beyond your knowledge cutoff. Search results will include citations.
 		`;
 	return systemPrompt;
 }
@@ -57,7 +63,7 @@ function stopReason(reason: Anthropic.Messages.StopReason | null): string {
 
 async function processToolCall(
 	toolUse: Anthropic.Messages.ToolUseBlock,
-): Promise<Anthropic.ToolResultBlockParam> {
+): Promise<Anthropic.ToolResultBlockParam | null> {
 	const tool = tools.find((t) => t.tool.name === toolUse.name);
 	if (!tool) {
 		log.error(`Unknown tool: ${toolUse.name}`);
@@ -69,6 +75,15 @@ async function processToolCall(
 		};
 	}
 
+	// Check if this is a RunnableTool with local execution
+	if (!isRunnableTool(tool)) {
+		// This is a PlainTool (API-executed like web_search)
+		// The API handles execution and returns results automatically
+		// No local processing needed
+		return null;
+	}
+
+	// Execute RunnableTool locally
 	try {
 		const input = tool.input.parse(toolUse.input);
 		const result = await tool.run(input as any);
@@ -116,8 +131,14 @@ async function sendMessage(
 		} else if (block.type === "tool_use") {
 			indicator.start(`Using tool: ${block.name}`);
 			const result = await processToolCall(block);
-			indicator.stop(`Tool ${block.name}: ${result ? "Success" : "Failed"}.`);
-			toolResults.push(result);
+			// Only collect results for locally-executed tools
+			// API-executed tools (like web_search) return null and are handled by the API
+			if (result !== null) {
+				indicator.stop(`Tool ${block.name}: ${result ? "Success" : "Failed"}.`);
+				toolResults.push(result);
+			} else {
+				indicator.stop(`Tool ${block.name}: Executed by API`);
+			}
 		}
 	}
 

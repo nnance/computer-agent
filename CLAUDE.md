@@ -25,9 +25,12 @@ npm run test:coverage   # Run tests with coverage report
 
 ## Architecture Overview
 
-### RunnableTool Pattern
+### Tool System: RunnableTool vs PlainTool
 
-All tools follow the `RunnableTool<T, U>` interface defined in [types.ts](src/types.ts):
+The project supports two types of tools defined in [types.ts](src/types.ts):
+
+#### RunnableTool (Local Execution)
+Tools with local execution logic (AppleScript, bash, text editor):
 
 ```typescript
 interface RunnableTool<T, U> {
@@ -40,6 +43,17 @@ interface RunnableTool<T, U> {
 **Critical**: The `input_schema` in the tool definition must exactly match the Zod schema structure. This duplication is required because:
 1. Claude API needs JSON Schema format (`input_schema`)
 2. Runtime validation uses Zod (`input` schema)
+
+#### PlainTool (API-Executed)
+Tools executed by Claude's API (web search):
+
+```typescript
+interface PlainTool {
+  tool: Anthropic.Tool | Anthropic.Messages.ToolUnion;
+}
+```
+
+These tools have no `input` or `run` methods because the API executes them and returns results automatically. The tool definition is only used to inform Claude of available capabilities.
 
 ### Agentic Message Loop
 
@@ -55,18 +69,20 @@ This enables multi-step autonomous task execution without user intervention.
 
 ### Tool Registration
 
-Tools are registered in [index.ts](src/index.ts:9-14):
+Tools are registered in [index.ts](src/index.ts:13-20):
 
 ```typescript
-const tools = [
+const tools: Tool[] = [
   ...appleNotesTools,
   ...appleCalendarTools,
   ...appleContactsTools,
   textEditorTool,
+  bashTool,
+  webSearchTool,
 ];
 ```
 
-Each tool array contains one or more `RunnableTool` instances exported from their respective modules.
+The tools array contains both `RunnableTool` (local execution) and `PlainTool` (API-executed) instances. The type guard `isRunnableTool()` is used to distinguish between them at runtime.
 
 ### Context System
 
@@ -74,13 +90,18 @@ System prompt is loaded from `./tmp/ASSISTANT.md` via `loadContext()` ([index.ts
 
 ### Tool Execution Flow
 
-Tool calls are processed in `processToolCall()` ([index.ts](src/index.ts:56-88)):
+Tool calls are processed in `processToolCall()` ([index.ts](src/index.ts:64-105)):
 
 1. Match tool by name
-2. Parse input using Zod schema (throws if invalid)
-3. Execute tool's `run()` method
-4. Return `ToolResultBlockParam` with content/error
-5. All results serialized as JSON strings
+2. Check if tool is `RunnableTool` using `isRunnableTool()` type guard
+3. **For PlainTool (API-executed)**: Return `null` (API handles execution)
+4. **For RunnableTool (local execution)**:
+   - Parse input using Zod schema (throws if invalid)
+   - Execute tool's `run()` method
+   - Return `ToolResultBlockParam` with content/error
+   - Results serialized as JSON strings
+
+API-executed tools like `web_search` are handled entirely by Claude's API. The API returns results as `BetaWebSearchToolResultBlock` content blocks automatically.
 
 ## AppleScript Integration Pattern
 
@@ -113,13 +134,54 @@ tool: {
 
 This tool maintains an in-memory edit history (`editHistory` Map) for undo capability on `str_replace` and `insert` operations.
 
+### Web Search Tool
+
+The [webSearchTool.ts](src/webSearchTool.ts) is a `PlainTool` that enables Claude to search the web:
+
+```typescript
+tool: {
+  type: "web_search_20250305",
+  name: "web_search",
+  max_uses?: number,
+  allowed_domains?: string[],
+  blocked_domains?: string[],
+  user_location?: { ... },
+}
+```
+
+**Key characteristics**:
+- **API-executed**: Claude's API performs searches; no local execution code needed
+- **No RunnableTool wrapper**: Just exports the plain tool definition
+- **Configurable via environment variables**: See `.env.example` for all options
+- **Automatic citations**: Search results include source citations
+- **Pricing**: $10 per 1,000 searches (plus standard token costs)
+
+**Configuration options** (all optional):
+- `WEB_SEARCH_MAX_USES`: Limit searches per request
+- `WEB_SEARCH_ALLOWED_DOMAINS`: Comma-separated domain whitelist
+- `WEB_SEARCH_BLOCKED_DOMAINS`: Comma-separated domain blacklist
+- `WEB_SEARCH_USER_LOCATION_*`: City, region, country, timezone for localized results
+
+**Important**: Cannot use both `allowed_domains` and `blocked_domains` simultaneously.
+
 ## Adding New Tools
+
+### For Locally-Executed Tools (RunnableTool)
 
 1. Create a new file following the pattern: `[feature]Tool.ts`
 2. Define Zod input schema
 3. Create `RunnableTool` instance(s) with matching `input_schema` and Zod schema
 4. Export tool array (e.g., `export const myTools = [tool1, tool2]`)
-5. Import and spread into `tools` array in [index.ts](src/index.ts:9-14)
+5. Import and add to `tools` array in [index.ts](src/index.ts:13-20)
+
+### For API-Executed Tools (PlainTool)
+
+1. Create a new file following the pattern: `[feature]Tool.ts`
+2. Export a `PlainTool` with only the tool definition
+3. Load any configuration from environment variables
+4. Import and add to `tools` array in [index.ts](src/index.ts:13-20)
+
+See [webSearchTool.ts](src/webSearchTool.ts) for a complete PlainTool example.
 
 Example:
 ```typescript
