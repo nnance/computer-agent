@@ -134,7 +134,7 @@ async function sendMessage(
 			// Only collect results for locally-executed tools
 			// API-executed tools (like web_search) return null and are handled by the API
 			if (result !== null) {
-				indicator.stop(`Tool ${block.name}: ${result ? "Success" : "Failed"}.`);
+				indicator.stop(`Tool ${block.name}: ${!result.is_error ? "Success" : "Failed"}.`);
 				toolResults.push(result);
 			} else {
 				indicator.stop(`Tool ${block.name}: Executed by API`);

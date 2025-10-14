@@ -72,14 +72,17 @@ describe("Web Search Tool", () => {
 	});
 
 	describe("Configuration Validation", () => {
-		it("should not have both allowed_domains and blocked_domains", () => {
-			const tool = webSearchTool.tool as any;
+        it("should not have both allowed_domains and blocked_domains", () => {
+            const tool = webSearchTool.tool as any;
 
-			// Per Claude docs: Cannot use both simultaneously
-			if (tool.allowed_domains !== undefined) {
-				expect(tool.blocked_domains).toBeUndefined();
-			}
-		});
+            // Per Claude docs: Cannot use both simultaneously
+            if (tool.allowed_domains !== undefined) {
+                expect(tool.blocked_domains).toBeUndefined();
+            }
+            if (tool.blocked_domains !== undefined) {
+                expect(tool.allowed_domains).toBeUndefined();
+            }
+        });
 
 		it("should have valid domain format if domains are specified", () => {
 			const tool = webSearchTool.tool as any;
