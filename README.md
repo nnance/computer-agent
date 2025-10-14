@@ -6,6 +6,15 @@ An AI-powered computer agent built with Anthropic's Claude Sonnet 4 model, desig
 
 Computer Agent is a command-line interface (CLI) tool that combines Claude's advanced language understanding with practical tools for managing your digital workspace. Unlike traditional coding assistants, this agent can interact with your Notes, Calendar, Contacts, and file system, making it ideal for productivity automation, personal information management, and general computer tasks.
 
+## Use Cases
+
+- **Personal Productivity**: Manage calendar events, notes, and contacts through conversation
+- **File Management**: Read, create, and modify files without leaving the terminal
+- **Information Retrieval**: Search across notes, events, and contacts with natural language
+- **Task Automation**: Chain multiple operations together (e.g., "Find my meeting notes and create a summary")
+- **Data Organization**: Create and organize information across Apple's native apps
+- **Quick Lookups**: Retrieve contact information, upcoming events, or note contents instantly
+
 ## Key Features
 
 ### AI-Powered Interaction
@@ -57,6 +66,10 @@ Computer Agent is a command-line interface (CLI) tool that combines Claude's adv
 - **Error Handling**: Comprehensive error handling and user feedback
 - **Tool System**: Extensible RunnableTool interface for easy addition of new capabilities
 
+## Project Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for planned features and improvements.
+
 ## Architecture
 
 The agent follows a modular architecture:
@@ -67,15 +80,6 @@ The agent follows a modular architecture:
 - **[appleNotesTool.ts](src/appleNotesTool.ts)**: Apple Notes integration via AppleScript
 - **[appleCalendarTool.ts](src/appleCalendarTool.ts)**: Apple Calendar integration via AppleScript
 - **[appleContactsTool.ts](src/appleContactsTool.ts)**: Apple Contacts integration via AppleScript
-
-## Use Cases
-
-- **Personal Productivity**: Manage calendar events, notes, and contacts through conversation
-- **File Management**: Read, create, and modify files without leaving the terminal
-- **Information Retrieval**: Search across notes, events, and contacts with natural language
-- **Task Automation**: Chain multiple operations together (e.g., "Find my meeting notes and create a summary")
-- **Data Organization**: Create and organize information across Apple's native apps
-- **Quick Lookups**: Retrieve contact information, upcoming events, or note contents instantly
 
 ## Requirements
 
