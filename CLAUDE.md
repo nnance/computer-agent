@@ -8,6 +8,18 @@ Computer Agent is a TypeScript CLI tool that integrates Claude Sonnet 4 with mac
 
 **Maintainer**: Nick Nance (nance.nick@gmail.com)
 
+## Coding Standards
+
+- Use Functional Programming principles
+- Write modular, reusable functions
+- Use async/await for asynchronous code
+- Use dependency injection where appropriate
+- Write unit tests for all functions (Vitest)
+- Use TypeScript with strict types (no implicit `any`)
+- Follow Biome formatting and linting rules (`npm run format`)
+- Use Zod for runtime schema validation
+- Use ES modules (`import`/`export`) with `.js` extensions in imports
+
 ## Essential Commands
 
 ```bash
