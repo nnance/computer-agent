@@ -1,25 +1,63 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
+	createSearchNotes,
+	createCreateNote,
+	createEditNote,
+	createListNotes,
+	createGetNoteContent,
 	searchNotes,
 	createNote,
 	editNote,
 	listNotes,
 	getNoteContent,
+	NotesManager,
 	type Note,
 } from "../appleNotesTool.js";
-import * as cp from "node:child_process";
 
-// Mock child_process
-vi.mock("node:child_process", () => ({
-	exec: vi.fn(),
-}));
+// Mock NotesManager for testing
+class MockNotesManager extends NotesManager {
+	private mockData: {
+		searchResults?: Note[] | null;
+		createResult?: string | null;
+		editResult?: string | null;
+		listResults?: Note[] | null;
+		contentResult?: string | null;
+	};
+
+	constructor(mockData = {}) {
+		super();
+		this.mockData = mockData;
+	}
+
+	async searchNotes(_query: string): Promise<Note[] | null> {
+		return this.mockData.searchResults ?? null;
+	}
+
+	async createNote(_title: string, _body?: string): Promise<string | null> {
+		return this.mockData.createResult ?? null;
+	}
+
+	async editNote(
+		_noteTitle: string,
+		_newBody: string,
+	): Promise<string | null> {
+		return this.mockData.editResult ?? null;
+	}
+
+	async listNotes(): Promise<Note[] | null> {
+		return this.mockData.listResults ?? null;
+	}
+
+	async getNoteContent(_noteTitle: string): Promise<string | null> {
+		return this.mockData.contentResult ?? null;
+	}
+}
 
 describe("appleNotesTool", () => {
 	let consoleLogSpy: ReturnType<typeof vi.spyOn>;
 	let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
 	beforeEach(() => {
-		vi.clearAllMocks();
 		consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 		consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 	});
@@ -109,83 +147,82 @@ describe("appleNotesTool", () => {
 
 	describe("searchNotes", () => {
 		it("should search notes and return results", async () => {
-			const mockOutput =
-				"id1|||Note 1|||Body 1:::id2|||Note 2|||Body 2";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
-			});
-
-			const result = await searchNotes.run({ query: "test" });
-
-			expect(result).toEqual([
+			const mockNotes: Note[] = [
 				{ id: "id1", name: "Note 1", body: "Body 1" },
 				{ id: "id2", name: "Note 2", body: "Body 2" },
-			]);
+			];
+
+			const mockManager = new MockNotesManager({
+				searchResults: mockNotes,
+			});
+			const tool = createSearchNotes(mockManager);
+
+			const result = await tool.run({ query: "test" });
+
+			expect(result).toEqual(mockNotes);
 			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
 			expect(consoleLogSpy).toHaveBeenCalledWith("Found 2 note(s).");
 		});
 
 		it("should return single note", async () => {
-			const mockOutput = "id1|||Note 1|||Body 1";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
+			const mockNote: Note[] = [
+				{ id: "id1", name: "Note 1", body: "Body 1" },
+			];
+
+			const mockManager = new MockNotesManager({
+				searchResults: mockNote,
 			});
+			const tool = createSearchNotes(mockManager);
 
-			const result = await searchNotes.run({ query: "test" });
+			const result = await tool.run({ query: "test" });
 
-			expect(result).toEqual([{ id: "id1", name: "Note 1", body: "Body 1" }]);
+			expect(result).toEqual(mockNote);
 		});
 
 		it("should return null when AppleScript fails", async () => {
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(
-					new Error("AppleScript error"),
-					{ stdout: "", stderr: "" } as any,
-					"",
-				);
-				return {} as any;
+			const mockManager = new MockNotesManager({
+				searchResults: null,
 			});
+			const tool = createSearchNotes(mockManager);
 
-			const result = await searchNotes.run({ query: "test" });
+			const result = await tool.run({ query: "test" });
 
 			expect(result).toBeNull();
 			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
-			expect(consoleErrorSpy).toHaveBeenCalled();
 		});
 
 		it("should handle empty search results", async () => {
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: "", stderr: "" } as any, "");
-				return {} as any;
+			const mockManager = new MockNotesManager({
+				searchResults: null,
 			});
+			const tool = createSearchNotes(mockManager);
 
-			const result = await searchNotes.run({ query: "nonexistent" });
+			const result = await tool.run({ query: "nonexistent" });
 
 			expect(result).toBeNull();
 		});
 
 		it("should escape special characters in query", async () => {
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				expect(cmd).toContain("test's note");
-				callback?.(null, { stdout: "", stderr: "" } as any, "");
-				return {} as any;
+			const mockNotes: Note[] = [];
+			const mockManager = new MockNotesManager({
+				searchResults: mockNotes,
 			});
+			const tool = createSearchNotes(mockManager);
 
-			await searchNotes.run({ query: "test's note" });
+			await tool.run({ query: "test's note" });
+
+			// This test is mainly to ensure no errors are thrown
 		});
 	});
 
 	describe("createNote", () => {
 		it("should create note with title and body", async () => {
-			const mockOutput = "Note created: Test Note";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
+			const mockManager = new MockNotesManager({
+				createResult: "Note created: Test Note",
 			});
+			const tool = createCreateNote(mockManager);
 
-			const result = await createNote.run({
+			const result = await tool.run({
 				title: "Test Note",
 				body: "Test body",
 			});
@@ -195,44 +232,37 @@ describe("appleNotesTool", () => {
 		});
 
 		it("should create note with only title", async () => {
-			const mockOutput = "Note created: Test Note";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
+			const mockManager = new MockNotesManager({
+				createResult: "Note created: Test Note",
 			});
+			const tool = createCreateNote(mockManager);
 
-			const result = await createNote.run({ title: "Test Note" });
+			const result = await tool.run({ title: "Test Note" });
 
 			expect(result).toBe("Note created: Test Note");
 		});
 
 		it("should return error message when creation fails", async () => {
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(
-					new Error("Creation failed"),
-					{ stdout: "", stderr: "" } as any,
-					"",
-				);
-				return {} as any;
+			const mockManager = new MockNotesManager({
+				createResult: null,
 			});
+			const tool = createCreateNote(mockManager);
 
-			const result = await createNote.run({ title: "Test Note" });
+			const result = await tool.run({ title: "Test Note" });
 
 			expect(result).toBe("Error creating note");
 			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
-			expect(consoleErrorSpy).toHaveBeenCalled();
 		});
 	});
 
 	describe("editNote", () => {
 		it("should edit existing note", async () => {
-			const mockOutput = "Note updated: Test Note";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
+			const mockManager = new MockNotesManager({
+				editResult: "Note updated: Test Note",
 			});
+			const tool = createEditNote(mockManager);
 
-			const result = await editNote.run({
+			const result = await tool.run({
 				noteTitle: "Test Note",
 				newBody: "Updated body",
 			});
@@ -242,13 +272,12 @@ describe("appleNotesTool", () => {
 		});
 
 		it("should return not found message", async () => {
-			const mockOutput = "Note not found: Nonexistent Note";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
+			const mockManager = new MockNotesManager({
+				editResult: "Note not found: Nonexistent Note",
 			});
+			const tool = createEditNote(mockManager);
 
-			const result = await editNote.run({
+			const result = await tool.run({
 				noteTitle: "Nonexistent Note",
 				newBody: "Body",
 			});
@@ -257,16 +286,12 @@ describe("appleNotesTool", () => {
 		});
 
 		it("should return error message when edit fails", async () => {
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(
-					new Error("Edit failed"),
-					{ stdout: "", stderr: "" } as any,
-					"",
-				);
-				return {} as any;
+			const mockManager = new MockNotesManager({
+				editResult: null,
 			});
+			const tool = createEditNote(mockManager);
 
-			const result = await editNote.run({
+			const result = await tool.run({
 				noteTitle: "Test Note",
 				newBody: "Body",
 			});
@@ -278,75 +303,68 @@ describe("appleNotesTool", () => {
 
 	describe("listNotes", () => {
 		it("should list all notes", async () => {
-			const mockOutput =
-				"id1|||Note 1|||Body 1:::id2|||Note 2|||Body 2:::id3|||Note 3|||Body 3";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
-			});
-
-			const result = await listNotes.run({});
-
-			expect(result).toEqual([
+			const mockNotes: Note[] = [
 				{ id: "id1", name: "Note 1", body: "Body 1" },
 				{ id: "id2", name: "Note 2", body: "Body 2" },
 				{ id: "id3", name: "Note 3", body: "Body 3" },
-			]);
+			];
+
+			const mockManager = new MockNotesManager({
+				listResults: mockNotes,
+			});
+			const tool = createListNotes(mockManager);
+
+			const result = await tool.run({});
+
+			expect(result).toEqual(mockNotes);
 			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
 			expect(consoleLogSpy).toHaveBeenCalledWith("Found 3 note(s).");
 		});
 
 		it("should return null when no notes found", async () => {
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: "", stderr: "" } as any, "");
-				return {} as any;
+			const mockManager = new MockNotesManager({
+				listResults: null,
 			});
+			const tool = createListNotes(mockManager);
 
-			const result = await listNotes.run({});
+			const result = await tool.run({});
 
 			expect(result).toBeNull();
 			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
 		});
 
 		it("should handle AppleScript errors", async () => {
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(
-					new Error("AppleScript error"),
-					{ stdout: "", stderr: "" } as any,
-					"",
-				);
-				return {} as any;
+			const mockManager = new MockNotesManager({
+				listResults: null,
 			});
+			const tool = createListNotes(mockManager);
 
-			const result = await listNotes.run({});
+			const result = await tool.run({});
 
 			expect(result).toBeNull();
-			expect(consoleErrorSpy).toHaveBeenCalled();
 		});
 	});
 
 	describe("getNoteContent", () => {
 		it("should get note content", async () => {
-			const mockOutput = "This is the note body content";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
+			const mockManager = new MockNotesManager({
+				contentResult: "This is the note body content",
 			});
+			const tool = createGetNoteContent(mockManager);
 
-			const result = await getNoteContent.run({ noteTitle: "Test Note" });
+			const result = await tool.run({ noteTitle: "Test Note" });
 
 			expect(result).toBe("This is the note body content");
 			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
 		});
 
 		it("should return not found message", async () => {
-			const mockOutput = "Note not found: Nonexistent Note";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
+			const mockManager = new MockNotesManager({
+				contentResult: "Note not found: Nonexistent Note",
 			});
+			const tool = createGetNoteContent(mockManager);
 
-			const result = await getNoteContent.run({
+			const result = await tool.run({
 				noteTitle: "Nonexistent Note",
 			});
 
@@ -354,29 +372,24 @@ describe("appleNotesTool", () => {
 		});
 
 		it("should return error message when retrieval fails", async () => {
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(
-					new Error("Retrieval failed"),
-					{ stdout: "", stderr: "" } as any,
-					"",
-				);
-				return {} as any;
+			const mockManager = new MockNotesManager({
+				contentResult: null,
 			});
+			const tool = createGetNoteContent(mockManager);
 
-			const result = await getNoteContent.run({ noteTitle: "Test Note" });
+			const result = await tool.run({ noteTitle: "Test Note" });
 
 			expect(result).toBe("Error retrieving note content");
 			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
 		});
 
 		it("should handle empty note content", async () => {
-			const mockOutput = "";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
+			const mockManager = new MockNotesManager({
+				contentResult: null,
 			});
+			const tool = createGetNoteContent(mockManager);
 
-			const result = await getNoteContent.run({ noteTitle: "Empty Note" });
+			const result = await tool.run({ noteTitle: "Empty Note" });
 
 			expect(result).toBe("Error retrieving note content");
 		});

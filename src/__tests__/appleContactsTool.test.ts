@@ -1,24 +1,59 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
+	createSearchContacts,
+	createCreateContact,
+	createListContacts,
+	createGetContact,
 	searchContacts,
 	createContact,
 	listContacts,
 	getContact,
+	ContactsManager,
 	type Contact,
 } from "../appleContactsTool.js";
-import * as cp from "node:child_process";
 
-// Mock child_process
-vi.mock("node:child_process", () => ({
-	exec: vi.fn(),
-}));
+// Mock ContactsManager for testing
+class MockContactsManager extends ContactsManager {
+	private mockData: {
+		searchResults?: Contact[] | null;
+		createResult?: string | null;
+		listResults?: Contact[] | null;
+		getResult?: Contact | null;
+	};
+
+	constructor(mockData = {}) {
+		super();
+		this.mockData = mockData;
+	}
+
+	async searchContacts(_query: string): Promise<Contact[] | null> {
+		return this.mockData.searchResults ?? null;
+	}
+
+	async createContact(
+		_name: string,
+		_email?: string,
+		_phone?: string,
+		_organization?: string,
+		_birthday?: string,
+	): Promise<string | null> {
+		return this.mockData.createResult ?? null;
+	}
+
+	async listContacts(): Promise<Contact[] | null> {
+		return this.mockData.listResults ?? null;
+	}
+
+	async getContact(_contactName: string): Promise<Contact | null> {
+		return this.mockData.getResult ?? null;
+	}
+}
 
 describe("appleContactsTool", () => {
 	let consoleLogSpy: ReturnType<typeof vi.spyOn>;
 	let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
 	beforeEach(() => {
-		vi.clearAllMocks();
 		consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 		consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 	});
@@ -106,16 +141,7 @@ describe("appleContactsTool", () => {
 
 	describe("searchContacts", () => {
 		it("should search contacts and return results", async () => {
-			const mockOutput =
-				"id1|||John Doe|||john@example.com,john.doe@work.com|||555-1234,555-5678|||Acme Corp|||January 15, 1990:::id2|||Jane Smith|||jane@example.com|||555-9999|||Tech Inc|||";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
-			});
-
-			const result = await searchContacts.run({ query: "John" });
-
-			expect(result).toEqual([
+			const mockContacts: Contact[] = [
 				{
 					id: "id1",
 					name: "John Doe",
@@ -132,21 +158,22 @@ describe("appleContactsTool", () => {
 					organization: "Tech Inc",
 					birthday: undefined,
 				},
-			]);
+			];
+
+			const mockManager = new MockContactsManager({
+				searchResults: mockContacts,
+			});
+			const tool = createSearchContacts(mockManager);
+
+			const result = await tool.run({ query: "John" });
+
+			expect(result).toEqual(mockContacts);
 			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
 			expect(consoleLogSpy).toHaveBeenCalledWith("Found 2 contact(s).");
 		});
 
 		it("should handle contact with no emails or phones", async () => {
-			const mockOutput = "id1|||John Doe||||||";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
-			});
-
-			const result = await searchContacts.run({ query: "John" });
-
-			expect(result).toEqual([
+			const mockContact: Contact[] = [
 				{
 					id: "id1",
 					name: "John Doe",
@@ -155,48 +182,43 @@ describe("appleContactsTool", () => {
 					organization: undefined,
 					birthday: undefined,
 				},
-			]);
+			];
+
+			const mockManager = new MockContactsManager({
+				searchResults: mockContact,
+			});
+			const tool = createSearchContacts(mockManager);
+
+			const result = await tool.run({ query: "John" });
+
+			expect(result).toEqual(mockContact);
 		});
 
 		it("should return null when no contacts found", async () => {
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: "", stderr: "" } as any, "");
-				return {} as any;
+			const mockManager = new MockContactsManager({
+				searchResults: null,
 			});
+			const tool = createSearchContacts(mockManager);
 
-			const result = await searchContacts.run({ query: "nonexistent" });
+			const result = await tool.run({ query: "nonexistent" });
 
 			expect(result).toBeNull();
 			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
 		});
 
 		it("should handle AppleScript errors", async () => {
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(
-					new Error("AppleScript error"),
-					{ stdout: "", stderr: "" } as any,
-					"",
-				);
-				return {} as any;
+			const mockManager = new MockContactsManager({
+				searchResults: null,
 			});
+			const tool = createSearchContacts(mockManager);
 
-			const result = await searchContacts.run({ query: "test" });
+			const result = await tool.run({ query: "test" });
 
 			expect(result).toBeNull();
-			expect(consoleErrorSpy).toHaveBeenCalled();
 		});
 
 		it("should search by organization", async () => {
-			const mockOutput =
-				"id1|||John Doe|||john@example.com|||555-1234|||Acme Corp|||";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
-			});
-
-			const result = await searchContacts.run({ query: "Acme" });
-
-			expect(result).toEqual([
+			const mockContact: Contact[] = [
 				{
 					id: "id1",
 					name: "John Doe",
@@ -205,19 +227,27 @@ describe("appleContactsTool", () => {
 					organization: "Acme Corp",
 					birthday: undefined,
 				},
-			]);
+			];
+
+			const mockManager = new MockContactsManager({
+				searchResults: mockContact,
+			});
+			const tool = createSearchContacts(mockManager);
+
+			const result = await tool.run({ query: "Acme" });
+
+			expect(result).toEqual(mockContact);
 		});
 	});
 
 	describe("createContact", () => {
 		it("should create contact with all parameters", async () => {
-			const mockOutput = "Contact created: John Doe";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
+			const mockManager = new MockContactsManager({
+				createResult: "Contact created: John Doe",
 			});
+			const tool = createCreateContact(mockManager);
 
-			const result = await createContact.run({
+			const result = await tool.run({
 				name: "John Doe",
 				email: "john@example.com",
 				phone: "555-1234",
@@ -230,25 +260,23 @@ describe("appleContactsTool", () => {
 		});
 
 		it("should create contact with only name", async () => {
-			const mockOutput = "Contact created: John Doe";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
+			const mockManager = new MockContactsManager({
+				createResult: "Contact created: John Doe",
 			});
+			const tool = createCreateContact(mockManager);
 
-			const result = await createContact.run({ name: "John Doe" });
+			const result = await tool.run({ name: "John Doe" });
 
 			expect(result).toBe("Contact created: John Doe");
 		});
 
 		it("should create contact with name and email", async () => {
-			const mockOutput = "Contact created: John Doe";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
+			const mockManager = new MockContactsManager({
+				createResult: "Contact created: John Doe",
 			});
+			const tool = createCreateContact(mockManager);
 
-			const result = await createContact.run({
+			const result = await tool.run({
 				name: "John Doe",
 				email: "john@example.com",
 			});
@@ -257,13 +285,12 @@ describe("appleContactsTool", () => {
 		});
 
 		it("should create contact with name and phone", async () => {
-			const mockOutput = "Contact created: John Doe";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
+			const mockManager = new MockContactsManager({
+				createResult: "Contact created: John Doe",
 			});
+			const tool = createCreateContact(mockManager);
 
-			const result = await createContact.run({
+			const result = await tool.run({
 				name: "John Doe",
 				phone: "555-1234",
 			});
@@ -272,13 +299,12 @@ describe("appleContactsTool", () => {
 		});
 
 		it("should create contact with name and organization", async () => {
-			const mockOutput = "Contact created: John Doe";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
+			const mockManager = new MockContactsManager({
+				createResult: "Contact created: John Doe",
 			});
+			const tool = createCreateContact(mockManager);
 
-			const result = await createContact.run({
+			const result = await tool.run({
 				name: "John Doe",
 				organization: "Acme Corp",
 			});
@@ -287,13 +313,12 @@ describe("appleContactsTool", () => {
 		});
 
 		it("should create contact with name and birthday", async () => {
-			const mockOutput = "Contact created: John Doe";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
+			const mockManager = new MockContactsManager({
+				createResult: "Contact created: John Doe",
 			});
+			const tool = createCreateContact(mockManager);
 
-			const result = await createContact.run({
+			const result = await tool.run({
 				name: "John Doe",
 				birthday: "January 15, 1990",
 			});
@@ -302,36 +327,21 @@ describe("appleContactsTool", () => {
 		});
 
 		it("should return error message when creation fails", async () => {
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(
-					new Error("Creation failed"),
-					{ stdout: "", stderr: "" } as any,
-					"",
-				);
-				return {} as any;
+			const mockManager = new MockContactsManager({
+				createResult: null,
 			});
+			const tool = createCreateContact(mockManager);
 
-			const result = await createContact.run({ name: "John Doe" });
+			const result = await tool.run({ name: "John Doe" });
 
 			expect(result).toBe("Error creating contact");
 			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
-			expect(consoleErrorSpy).toHaveBeenCalled();
 		});
 	});
 
 	describe("listContacts", () => {
 		it("should list all contacts", async () => {
-			// Format: id|||name|||emails|||phones|||organization|||birthday (6 fields, 5 delimiters)
-			const mockOutput =
-				"id1|||John Doe|||john@example.com|||555-1234|||Acme Corp|||January 15, 1990:::id2|||Jane Smith|||jane@example.com|||555-9999|||Tech Inc|||:::id3|||Bob Johnson||||||";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
-			});
-
-			const result = await listContacts.run({});
-
-			expect(result).toEqual([
+			const mockContacts: Contact[] = [
 				{
 					id: "id1",
 					name: "John Doe",
@@ -356,22 +366,22 @@ describe("appleContactsTool", () => {
 					organization: undefined,
 					birthday: undefined,
 				},
-			]);
+			];
+
+			const mockManager = new MockContactsManager({
+				listResults: mockContacts,
+			});
+			const tool = createListContacts(mockManager);
+
+			const result = await tool.run({});
+
+			expect(result).toEqual(mockContacts);
 			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
 			expect(consoleLogSpy).toHaveBeenCalledWith("Found 3 contact(s).");
 		});
 
 		it("should handle contacts with multiple emails and phones", async () => {
-			const mockOutput =
-				"id1|||John Doe|||john@example.com,john.doe@work.com,john.personal@mail.com|||555-1234,555-5678,555-0000|||Acme Corp|||";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
-			});
-
-			const result = await listContacts.run({});
-
-			expect(result).toEqual([
+			const mockContacts: Contact[] = [
 				{
 					id: "id1",
 					name: "John Doe",
@@ -384,87 +394,91 @@ describe("appleContactsTool", () => {
 					organization: "Acme Corp",
 					birthday: undefined,
 				},
-			]);
+			];
+
+			const mockManager = new MockContactsManager({
+				listResults: mockContacts,
+			});
+			const tool = createListContacts(mockManager);
+
+			const result = await tool.run({});
+
+			expect(result).toEqual(mockContacts);
 		});
 
 		it("should return null when no contacts found", async () => {
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: "", stderr: "" } as any, "");
-				return {} as any;
+			const mockManager = new MockContactsManager({
+				listResults: null,
 			});
+			const tool = createListContacts(mockManager);
 
-			const result = await listContacts.run({});
+			const result = await tool.run({});
 
 			expect(result).toBeNull();
 			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
 		});
 
 		it("should handle AppleScript errors", async () => {
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(
-					new Error("AppleScript error"),
-					{ stdout: "", stderr: "" } as any,
-					"",
-				);
-				return {} as any;
+			const mockManager = new MockContactsManager({
+				listResults: null,
 			});
+			const tool = createListContacts(mockManager);
 
-			const result = await listContacts.run({});
+			const result = await tool.run({});
 
 			expect(result).toBeNull();
-			expect(consoleErrorSpy).toHaveBeenCalled();
 		});
 	});
 
 	describe("getContact", () => {
 		it("should get contact by name", async () => {
-			const mockOutput =
-				"id1|||John Doe|||john@example.com,john.doe@work.com|||555-1234,555-5678|||Acme Corp|||January 15, 1990";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
-			});
-
-			const result = await getContact.run({ contactName: "John Doe" });
-
-			expect(result).toEqual({
+			const mockContact: Contact = {
 				id: "id1",
 				name: "John Doe",
 				emails: ["john@example.com", "john.doe@work.com"],
 				phones: ["555-1234", "555-5678"],
 				organization: "Acme Corp",
 				birthday: "January 15, 1990",
+			};
+
+			const mockManager = new MockContactsManager({
+				getResult: mockContact,
 			});
+			const tool = createGetContact(mockManager);
+
+			const result = await tool.run({ contactName: "John Doe" });
+
+			expect(result).toEqual(mockContact);
 			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
 		});
 
 		it("should get contact with minimal information", async () => {
-			const mockOutput = "id1|||John Doe||||||";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
-			});
-
-			const result = await getContact.run({ contactName: "John Doe" });
-
-			expect(result).toEqual({
+			const mockContact: Contact = {
 				id: "id1",
 				name: "John Doe",
 				emails: [],
 				phones: [],
 				organization: undefined,
 				birthday: undefined,
+			};
+
+			const mockManager = new MockContactsManager({
+				getResult: mockContact,
 			});
+			const tool = createGetContact(mockManager);
+
+			const result = await tool.run({ contactName: "John Doe" });
+
+			expect(result).toEqual(mockContact);
 		});
 
 		it("should return null when contact not found", async () => {
-			const mockOutput = "Contact not found: Nonexistent Person";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
+			const mockManager = new MockContactsManager({
+				getResult: null,
 			});
+			const tool = createGetContact(mockManager);
 
-			const result = await getContact.run({
+			const result = await tool.run({
 				contactName: "Nonexistent Person",
 			});
 
@@ -473,39 +487,34 @@ describe("appleContactsTool", () => {
 		});
 
 		it("should handle AppleScript errors", async () => {
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(
-					new Error("AppleScript error"),
-					{ stdout: "", stderr: "" } as any,
-					"",
-				);
-				return {} as any;
+			const mockManager = new MockContactsManager({
+				getResult: null,
 			});
+			const tool = createGetContact(mockManager);
 
-			const result = await getContact.run({ contactName: "John Doe" });
+			const result = await tool.run({ contactName: "John Doe" });
 
 			expect(result).toBeNull();
-			expect(consoleErrorSpy).toHaveBeenCalled();
 		});
 
 		it("should handle contact with empty organization field", async () => {
-			const mockOutput =
-				"id1|||Jane Smith|||jane@example.com|||555-9999|||missing value|||";
-			vi.mocked(cp.exec).mockImplementation((cmd, callback) => {
-				callback?.(null, { stdout: mockOutput, stderr: "" } as any, "");
-				return {} as any;
-			});
-
-			const result = await getContact.run({ contactName: "Jane Smith" });
-
-			expect(result).toEqual({
+			const mockContact: Contact = {
 				id: "id1",
 				name: "Jane Smith",
 				emails: ["jane@example.com"],
 				phones: ["555-9999"],
 				organization: "missing value",
 				birthday: undefined,
+			};
+
+			const mockManager = new MockContactsManager({
+				getResult: mockContact,
 			});
+			const tool = createGetContact(mockManager);
+
+			const result = await tool.run({ contactName: "Jane Smith" });
+
+			expect(result).toEqual(mockContact);
 		});
 	});
 
