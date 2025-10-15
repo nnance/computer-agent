@@ -9,7 +9,7 @@ export interface Note {
 	body: string;
 }
 
-class NotesManager {
+export class NotesManager {
 	private execAsync = promisify(exec);
 
 	async executeAppleScript(script: string) {
@@ -130,28 +130,35 @@ const QueryInputSchema = z.object({
 });
 export type QueryInput = z.infer<typeof QueryInputSchema>;
 
-export const searchNotes: RunnableTool<QueryInput, Note[] | null> = {
-	tool: {
-		name: "searchNotes",
-		description: "Search notes in the Apple Notes app by title or content.",
-		input_schema: {
-			type: "object",
-			properties: { query: { type: "string" } },
+export function createSearchNotes(
+	manager?: NotesManager,
+): RunnableTool<QueryInput, Note[] | null> {
+	const notesManager = manager || new NotesManager();
+
+	return {
+		tool: {
+			name: "searchNotes",
+			description: "Search notes in the Apple Notes app by title or content.",
+			input_schema: {
+				type: "object",
+				properties: { query: { type: "string" } },
+			},
 		},
-	},
-	input: QueryInputSchema,
-	run: async ({ query }) => {
-		const manager = new NotesManager();
-		const result = await manager.searchNotes(query);
-		console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
-		if (!result) {
-			console.log(`Error: No notes found or error occurred.`);
-		} else {
-			console.log(`Found ${result.length} note(s).`);
-		}
-		return result;
-	},
-};
+		input: QueryInputSchema,
+		run: async ({ query }) => {
+			const result = await notesManager.searchNotes(query);
+			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+			if (!result) {
+				console.log(`Error: No notes found or error occurred.`);
+			} else {
+				console.log(`Found ${result.length} note(s).`);
+			}
+			return result;
+		},
+	};
+}
+
+export const searchNotes = createSearchNotes();
 
 const CreateInputSchema = z.object({
 	title: z.string().describe("Title of the new note"),
@@ -159,30 +166,37 @@ const CreateInputSchema = z.object({
 });
 export type CreateInput = z.infer<typeof CreateInputSchema>;
 
-export const createNote: RunnableTool<CreateInput, string> = {
-	tool: {
-		name: "createNote",
-		description: "Create a new note in the Apple Notes app.",
-		input_schema: {
-			type: "object",
-			properties: {
-				title: { type: "string" },
-				body: { type: "string", nullable: true },
+export function createCreateNote(
+	manager?: NotesManager,
+): RunnableTool<CreateInput, string> {
+	const notesManager = manager || new NotesManager();
+
+	return {
+		tool: {
+			name: "createNote",
+			description: "Create a new note in the Apple Notes app.",
+			input_schema: {
+				type: "object",
+				properties: {
+					title: { type: "string" },
+					body: { type: "string", nullable: true },
+				},
 			},
 		},
-	},
-	input: CreateInputSchema,
-	run: async ({ title, body }) => {
-		const manager = new NotesManager();
-		const result = await manager.createNote(title, body);
-		console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
-		if (!result) {
-			console.log(`Error creating note.`);
-			return "Error creating note";
-		}
-		return result;
-	},
-};
+		input: CreateInputSchema,
+		run: async ({ title, body }) => {
+			const result = await notesManager.createNote(title, body);
+			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+			if (!result) {
+				console.log(`Error creating note.`);
+				return "Error creating note";
+			}
+			return result;
+		},
+	};
+}
+
+export const createNote = createCreateNote();
 
 const EditInputSchema = z.object({
 	noteTitle: z.string().describe("Title of the note to edit"),
@@ -190,83 +204,104 @@ const EditInputSchema = z.object({
 });
 export type EditInput = z.infer<typeof EditInputSchema>;
 
-export const editNote: RunnableTool<EditInput, string> = {
-	tool: {
-		name: "editNote",
-		description: "Edit an existing note in the Apple Notes app.",
-		input_schema: {
-			type: "object",
-			properties: {
-				noteTitle: { type: "string" },
-				newBody: { type: "string" },
+export function createEditNote(
+	manager?: NotesManager,
+): RunnableTool<EditInput, string> {
+	const notesManager = manager || new NotesManager();
+
+	return {
+		tool: {
+			name: "editNote",
+			description: "Edit an existing note in the Apple Notes app.",
+			input_schema: {
+				type: "object",
+				properties: {
+					noteTitle: { type: "string" },
+					newBody: { type: "string" },
+				},
 			},
 		},
-	},
-	input: EditInputSchema,
-	run: async ({ noteTitle, newBody }) => {
-		const manager = new NotesManager();
-		const result = await manager.editNote(noteTitle, newBody);
-		console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
-		if (!result) {
-			console.log(`Error editing note.`);
-			return "Error editing note";
-		}
-		return result;
-	},
-};
+		input: EditInputSchema,
+		run: async ({ noteTitle, newBody }) => {
+			const result = await notesManager.editNote(noteTitle, newBody);
+			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+			if (!result) {
+				console.log(`Error editing note.`);
+				return "Error editing note";
+			}
+			return result;
+		},
+	};
+}
+
+export const editNote = createEditNote();
 
 const ListInputSchema = z.object({});
 export type ListInput = z.infer<typeof ListInputSchema>;
 
-export const listNotes: RunnableTool<ListInput, Note[] | null> = {
-	tool: {
-		name: "listNotes",
-		description: "List all notes in the Apple Notes app.",
-		input_schema: {
-			type: "object",
-			properties: {},
+export function createListNotes(
+	manager?: NotesManager,
+): RunnableTool<ListInput, Note[] | null> {
+	const notesManager = manager || new NotesManager();
+
+	return {
+		tool: {
+			name: "listNotes",
+			description: "List all notes in the Apple Notes app.",
+			input_schema: {
+				type: "object",
+				properties: {},
+			},
 		},
-	},
-	input: ListInputSchema,
-	run: async () => {
-		const manager = new NotesManager();
-		const result = await manager.listNotes();
-		console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
-		if (!result) {
-			console.log(`Error: No notes found or error occurred.`);
-		} else {
-			console.log(`Found ${result.length} note(s).`);
-		}
-		return result;
-	},
-};
+		input: ListInputSchema,
+		run: async () => {
+			const result = await notesManager.listNotes();
+			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+			if (!result) {
+				console.log(`Error: No notes found or error occurred.`);
+			} else {
+				console.log(`Found ${result.length} note(s).`);
+			}
+			return result;
+		},
+	};
+}
+
+export const listNotes = createListNotes();
 
 const GetContentInputSchema = z.object({
 	noteTitle: z.string().describe("Title of the note to retrieve"),
 });
 export type GetContentInput = z.infer<typeof GetContentInputSchema>;
 
-export const getNoteContent: RunnableTool<GetContentInput, string> = {
-	tool: {
-		name: "getNoteContent",
-		description: "Get the content of a specific note by its title.",
-		input_schema: {
-			type: "object",
-			properties: { noteTitle: { type: "string" } },
+export function createGetNoteContent(
+	manager?: NotesManager,
+): RunnableTool<GetContentInput, string> {
+	const notesManager = manager || new NotesManager();
+
+	return {
+		tool: {
+			name: "getNoteContent",
+			description: "Get the content of a specific note by its title.",
+			input_schema: {
+				type: "object",
+				properties: { noteTitle: { type: "string" } },
+			},
 		},
-	},
-	input: GetContentInputSchema,
-	run: async ({ noteTitle }) => {
-		const manager = new NotesManager();
-		const result = await manager.getNoteContent(noteTitle);
-		console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
-		if (!result) {
-			console.log(`Error retrieving note content.`);
-			return "Error retrieving note content";
-		}
-		return result;
-	},
-};
+		input: GetContentInputSchema,
+		run: async ({ noteTitle }) => {
+			const result = await notesManager.getNoteContent(noteTitle);
+			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+			if (!result) {
+				console.log(`Error retrieving note content.`);
+				return "Error retrieving note content";
+			}
+			return result;
+		},
+	};
+}
+
+export const getNoteContent = createGetNoteContent();
 
 export const appleNotesTools = [
 	searchNotes,
