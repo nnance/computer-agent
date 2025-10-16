@@ -6,6 +6,7 @@ import { appleCalendarTools } from "./tools/appleCalendarTool.js";
 import { appleContactsTools } from "./tools/appleContactsTool.js";
 import { appleNotesTools } from "./tools/appleNotesTool.js";
 import { bashTool } from "./tools/bashTool.js";
+import { grepTool } from "./tools/grepTool.js";
 import { handleView, textEditorTool } from "./tools/textEditorTool.js";
 import { isRunnableTool, type Tool } from "./tools/types.js";
 import { webFetchTool } from "./tools/webFetchTool.js";
@@ -28,6 +29,7 @@ const tools: Tool[] = [
 	...appleContactsTools,
 	textEditorTool,
 	bashTool,
+	grepTool,
 	webSearchTool,
 	webFetchTool,
 ];

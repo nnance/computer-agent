@@ -41,7 +41,7 @@ Major features that will significantly enhance the capabilities of the project.
 
 ---
 
-[ ] **GREP**: Powerful search tool built on ripgrep for searching file contents.
+[x] **GREP**: Powerful search tool built on ripgrep for searching file contents.
 
 **Parameters:**
 - `pattern`: Regular expression pattern to search for (required)
