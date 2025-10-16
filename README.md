@@ -96,10 +96,13 @@ The agent follows a modular architecture:
    npm install
    ```
 
-3. Create a `.env` file with your Anthropic API key:
+3. Create a `.env` file with your configuration:
    ```
    ANTHROPIC_API_KEY=your_key_here
+   APPLE_CALENDAR_NAME=your_calendar_name_here
    ```
+
+   To find your calendar name, you can run the app first and use the `listCalendars` tool, or check your Apple Calendar app. Common values are your email address (e.g., `name@gmail.com`) or the calendar name as shown in the Calendar app.
 
 4. Build and run:
    ```bash
@@ -110,7 +113,16 @@ The agent follows a modular architecture:
 
 ## Configuration
 
-Place a context file at `./tmp/ASSISTANT.md` to provide the agent with persistent context about your preferences, common tasks, or reference information. This content will be included in the system prompt.
+### Required Configuration
+
+- **`ANTHROPIC_API_KEY`**: Your Anthropic API key for Claude Sonnet 4 access
+- **`APPLE_CALENDAR_NAME`**: The default calendar name to use for calendar operations (e.g., your email address or calendar name from Apple Calendar app)
+
+### Optional Configuration
+
+- **Context File**: Place a context file at `./.agent/ASSISTANT.md` (configurable via `CONTEXT_FILE_PATH` env variable) to provide the agent with persistent context about your preferences, common tasks, or reference information. This content will be included in the system prompt.
+
+See [.env.example](.env.example) for all available configuration options.
 
 ## Development
 

@@ -244,6 +244,7 @@ export const myTools = [myTool];
 
 ### Environment
 - Requires `ANTHROPIC_API_KEY` in `.env`
+- Requires `APPLE_CALENDAR_NAME` in `.env` (default calendar for calendar operations)
 - macOS-only (AppleScript dependencies)
 - Node.js with ES modules support
 
@@ -264,7 +265,6 @@ export const myTools = [myTool];
 - Max tokens: 1024 (hardcoded in [index.ts](src/index.ts:118))
 - Synchronous AppleScript execution (no parallelization)
 - No streaming response support
-- Default calendar hardcoded to `"nance.nick@gmail.com"` in calendar tools
 
 ### Code Style
 - Use Biome for formatting (`npm run format`)

@@ -3,6 +3,14 @@ import { promisify } from "node:util";
 import { z } from "zod";
 import type { RunnableTool } from "./types.js";
 
+// Load and validate required environment variable
+const DEFAULT_CALENDAR_NAME = process.env.APPLE_CALENDAR_NAME;
+if (!DEFAULT_CALENDAR_NAME) {
+	throw new Error(
+		"APPLE_CALENDAR_NAME environment variable is required. Please set it in your .env file.",
+	);
+}
+
 export interface CalendarEvent {
 	summary: string;
 	startDate: string;
@@ -52,7 +60,7 @@ export class CalendarManager {
 	}
 
 	async listEvents(
-		calendarName = "nance.nick@gmail.com",
+		calendarName = DEFAULT_CALENDAR_NAME,
 		days = 7,
 	): Promise<CalendarEvent[] | null> {
 		const script = `
@@ -88,7 +96,7 @@ export class CalendarManager {
 
 	async searchEvents(
 		query: string,
-		calendarName = "nance.nick@gmail.com",
+		calendarName = DEFAULT_CALENDAR_NAME,
 		days = 90,
 	): Promise<CalendarEvent[] | null> {
 		const script = `
@@ -170,7 +178,7 @@ export class CalendarManager {
 
 	async getTodayEvents() {
 		// Just use the optimized listEvents function with 1 day
-		return this.listEvents("nance.nick@gmail.com", 1);
+		return this.listEvents(DEFAULT_CALENDAR_NAME, 1);
 	}
 
 	async getEventDetails(
@@ -251,7 +259,7 @@ const ListEventsInputSchema = z.object({
 		.string()
 		.optional()
 		.describe(
-			"Name of the calendar to list events from (defaults to nance.nick@gmail.com)",
+			"Name of the calendar to list events from (defaults to configured calendar)",
 		),
 	days: z
 		.number()
@@ -298,7 +306,7 @@ const SearchEventsInputSchema = z.object({
 		.string()
 		.optional()
 		.describe(
-			"Name of the calendar to search in (defaults to nance.nick@gmail.com)",
+			"Name of the calendar to search in (defaults to configured calendar)",
 		),
 	days: z
 		.number()
