@@ -17,7 +17,7 @@ import {
 	CalendarManager,
 	type CalendarEvent,
 	type EventDetail,
-} from "../appleCalendarTool.js";
+} from "../tools/appleCalendarTool.js";
 
 // Mock CalendarManager for testing
 class MockCalendarManager extends CalendarManager {

@@ -5,7 +5,7 @@ import * as os from "node:os";
 import {
 	textEditorTool,
 	handleView,
-} from "../textEditorTool.js";
+} from "../tools/textEditorTool.js";
 
 describe("textEditorTool", () => {
 	let testDir: string;

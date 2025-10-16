@@ -1,14 +1,13 @@
 import "dotenv/config";
 import Anthropic from "@anthropic-ai/sdk";
 import { isCancel, log, spinner, text } from "@clack/prompts";
-import { appleCalendarTools } from "./appleCalendarTool.js";
-import { appleContactsTools } from "./appleContactsTool.js";
-import { appleNotesTools } from "./appleNotesTool.js";
-import { bashTool } from "./bashTool.js";
-import { handleView, textEditorTool } from "./textEditorTool.js";
-import { webSearchTool } from "./webSearchTool.js";
-import type { Tool } from "./types.js";
-import { isRunnableTool } from "./types.js";
+import { appleCalendarTools } from "./tools/appleCalendarTool.js";
+import { appleContactsTools } from "./tools/appleContactsTool.js";
+import { appleNotesTools } from "./tools/appleNotesTool.js";
+import { bashTool } from "./tools/bashTool.js";
+import { handleView, textEditorTool } from "./tools/textEditorTool.js";
+import { webSearchTool } from "./tools/webSearchTool.js";
+import {isRunnableTool, type Tool } from "./tools/types.js";
 
 const tools: Tool[] = [
 	...appleNotesTools,

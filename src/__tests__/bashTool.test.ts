@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { bashTool, type BashToolInput } from "../bashTool.js";
+import { bashTool, type BashToolInput } from "../tools/bashTool.js";
 
 /**
  * Test suite for the Bash Tool
@@ -536,7 +536,7 @@ describe("Bash Tool", () => {
 
 	describe("Type Guard Compatibility", () => {
 		it("should be correctly identified as RunnableTool", async () => {
-			const { isRunnableTool } = await import("../types.js");
+			const { isRunnableTool } = await import("../tools/types.js");
 
 			expect(isRunnableTool(bashTool)).toBe(true);
 		});

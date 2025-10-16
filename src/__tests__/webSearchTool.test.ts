@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { webSearchTool } from "../webSearchTool.js";
+import { webSearchTool } from "../tools/webSearchTool.js";
 
 /**
  * Test suite for the web search tool
@@ -125,14 +125,14 @@ describe("Web Search Tool", () => {
 
 describe("Type Guard Tests", () => {
 	it("should correctly identify PlainTool", async () => {
-		const { isRunnableTool } = await import("../types.js");
-		const { webSearchTool } = await import("../webSearchTool.js");
+		const { isRunnableTool } = await import("../tools/types.js");
+		const { webSearchTool } = await import("../tools/webSearchTool.js");
 
 		expect(isRunnableTool(webSearchTool)).toBe(false);
 	});
 
 	it("should correctly identify RunnableTool", async () => {
-		const { isRunnableTool } = await import("../types.js");
+		const { isRunnableTool } = await import("../tools/types.js");
 		const mockRunnableTool = {
 			tool: {
 				name: "test",

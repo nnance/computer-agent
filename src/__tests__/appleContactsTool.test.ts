@@ -10,7 +10,7 @@ import {
 	getContact,
 	ContactsManager,
 	type Contact,
-} from "../appleContactsTool.js";
+} from "../tools/appleContactsTool.js";
 
 // Mock ContactsManager for testing
 class MockContactsManager extends ContactsManager {

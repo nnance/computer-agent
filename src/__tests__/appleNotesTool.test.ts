@@ -12,7 +12,7 @@ import {
 	getNoteContent,
 	NotesManager,
 	type Note,
-} from "../appleNotesTool.js";
+} from "../tools/appleNotesTool";
 
 // Mock NotesManager for testing
 class MockNotesManager extends NotesManager {
