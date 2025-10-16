@@ -18,6 +18,8 @@ const tools: Tool[] = [
 	webSearchTool,
 ];
 const contextFile = process.env.CONTEXT_FILE_PATH || "./.agent/ASSISTANT.md";
+const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-5";
+const maxTokens = Number.parseInt(process.env.ANTHROPIC_MAX_TOKENS || "1024", 10);
 const anthropic = new Anthropic();
 const indicator = spinner();
 
@@ -112,10 +114,10 @@ async function sendMessage(
 
 	// Call the Anthropic API
 	const msg = await anthropic.messages.create({
-		model: "claude-sonnet-4-5",
+		model,
 		tools: tools.map((t) => t.tool),
 		system,
-		max_tokens: 1024,
+		max_tokens: maxTokens,
 		messages: [...context],
 	});
 	messages.push({ role: "assistant", content: msg.content });

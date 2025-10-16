@@ -245,6 +245,8 @@ export const myTools = [myTool];
 ### Environment
 - Requires `ANTHROPIC_API_KEY` in `.env`
 - Requires `APPLE_CALENDAR_NAME` in `.env` (default calendar for calendar operations)
+- Optional `ANTHROPIC_MODEL` in `.env` (default: `claude-sonnet-4-5`)
+- Optional `ANTHROPIC_MAX_TOKENS` in `.env` (default: `1024`)
 - macOS-only (AppleScript dependencies)
 - Node.js with ES modules support
 
@@ -262,7 +264,6 @@ export const myTools = [myTool];
 - **Globals**: `describe`, `it`, `expect` are available globally (no imports needed)
 
 ### Current Limitations
-- Max tokens: 1024 (hardcoded in [index.ts](src/index.ts:118))
 - Synchronous AppleScript execution (no parallelization)
 - No streaming response support
 
