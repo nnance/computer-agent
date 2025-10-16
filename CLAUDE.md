@@ -25,7 +25,7 @@ Computer Agent is a TypeScript CLI tool that integrates Claude Sonnet 4 with mac
 ```bash
 npm install              # Install dependencies
 npm run build           # Compile TypeScript to dist/
-npm start               # Build and run (automatically runs build via prestart)
+npm start               # Build and run in interactive mode (automatically runs build via prestart)
 npm run format          # Run Biome linter and formatter
 npm test                # Run tests with Vitest
 npm run test:watch      # Run tests in watch mode
@@ -34,6 +34,47 @@ npm run test:coverage   # Run tests with coverage report
 ```
 
 **Important**: The project uses ES modules (`"type": "module"`). All imports must include `.js` extensions, even though source files are `.ts`.
+
+## CLI Usage Modes
+
+The agent supports two modes of operation:
+
+### Interactive Mode (Default)
+
+Start a conversational session where you can have multiple back-and-forth exchanges:
+
+```bash
+npm start
+```
+
+The agent will prompt you with "How can I help you?" and wait for your input. You can continue the conversation across multiple turns until you cancel (Ctrl+C).
+
+### Non-Interactive Mode
+
+Send a single message and receive a response without entering interactive mode:
+
+```bash
+# Using -m flag
+npm start -- -m "What's on my calendar today?"
+
+# Using --message flag
+npm start -- --message "Add a note titled 'Meeting' with content 'Discuss project'"
+```
+
+In non-interactive mode:
+- The agent processes your message and returns the complete response
+- Tool calls are executed automatically as part of the agentic loop
+- Output is plain text (no interactive spinners)
+- The program exits after the response is complete
+
+### Help
+
+Display usage information:
+
+```bash
+npm start -- --help
+npm start -- -h
+```
 
 ## Architecture Overview
 
