@@ -5,6 +5,7 @@ import { appleCalendarTools } from "./tools/appleCalendarTool.js";
 import { appleContactsTools } from "./tools/appleContactsTool.js";
 import { appleNotesTools } from "./tools/appleNotesTool.js";
 import { bashTool } from "./tools/bashTool.js";
+import { grepTool } from "./tools/grepTool.js";
 import { handleView, textEditorTool } from "./tools/textEditorTool.js";
 import { webSearchTool } from "./tools/webSearchTool.js";
 import {isRunnableTool, type Tool } from "./tools/types.js";
@@ -15,6 +16,7 @@ const tools: Tool[] = [
 	...appleContactsTools,
 	textEditorTool,
 	bashTool,
+	grepTool,
 	webSearchTool,
 ];
 const contextFile = process.env.CONTEXT_FILE_PATH || "./.agent/ASSISTANT.md";
