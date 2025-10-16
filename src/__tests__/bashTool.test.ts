@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { bashTool, type BashToolInput } from "../tools/bashTool.js";
+import { type BashToolInput, bashTool } from "../tools/bashTool.js";
 
 /**
  * Test suite for the Bash Tool

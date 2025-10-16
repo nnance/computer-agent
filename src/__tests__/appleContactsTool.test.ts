@@ -1,15 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-	createSearchContacts,
-	createCreateContact,
-	createListContacts,
-	createGetContact,
-	searchContacts,
-	createContact,
-	listContacts,
-	getContact,
-	ContactsManager,
 	type Contact,
+	ContactsManager,
+	createContact,
+	createCreateContact,
+	createGetContact,
+	createListContacts,
+	createSearchContacts,
+	getContact,
+	listContacts,
+	searchContacts,
 } from "../tools/appleContactsTool.js";
 
 // Mock ContactsManager for testing
