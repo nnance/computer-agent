@@ -16,7 +16,7 @@ Minor improvements and bug fixes that enhance the current functionality.
 
 Major features that will significantly enhance the capabilities of the project.
 
-[ ] **CLI Arguments**: Add support for command-line arguments to call the agent without interactive mode
+[x] **CLI Arguments**: Add support for command-line arguments to call the agent without interactive mode
 [ ] **Project Structure**: Opionated project structure for AI agents.  Reference [here](https://x.com/trq212/status/1944877527044120655)
 [ ] **Tool Discovery**: Auto-discover tools from directory
 [ ] **Context Management**: Improve handling of long conversations
