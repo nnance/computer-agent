@@ -9,7 +9,7 @@ Minor improvements and bug fixes that enhance the current functionality.
 [x] **System Prompt**: Improve the default location of the system prompt and make it more customizable
 [x] **Testing Infrastructure**: Add comprehensive test suite
 [ ] **Error Handling**: More robust error handling and user feedback
-[ ] **Configuration System**: Move hardcoded values to config file
+[x] **Configuration System**: Move hardcoded values to config file
 [ ] **Logging**: Implement structured logging system
 
 ## Features
