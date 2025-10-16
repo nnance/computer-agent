@@ -17,7 +17,7 @@ const tools: Tool[] = [
 	bashTool,
 	webSearchTool,
 ];
-const contextFile = "./tmp/ASSISTANT.md";
+const contextFile = process.env.CONTEXT_FILE_PATH || "./.agent/ASSISTANT.md";
 const anthropic = new Anthropic();
 const indicator = spinner();
 

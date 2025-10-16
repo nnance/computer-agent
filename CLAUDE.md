@@ -98,7 +98,16 @@ The tools array contains both `RunnableTool` (local execution) and `PlainTool` (
 
 ### Context System
 
-System prompt is loaded from `./tmp/ASSISTANT.md` via `loadContext()` ([index.ts](src/index.ts:19-33)). This file provides persistent context about user preferences and reference information. The context file path is hardcoded.
+System prompt is loaded from a configurable context file via `loadContext()` ([index.ts](src/index.ts:24-40)). This file provides persistent context about user preferences and reference information.
+
+**Configuration**:
+- Environment variable: `CONTEXT_FILE_PATH`
+- Default path: `./.agent/ASSISTANT.md`
+
+The context file path can be customized in `.env`:
+```bash
+CONTEXT_FILE_PATH=./custom/path/context.md
+```
 
 ### Tool Execution Flow
 
@@ -252,10 +261,9 @@ export const myTools = [myTool];
 - **Globals**: `describe`, `it`, `expect` are available globally (no imports needed)
 
 ### Current Limitations
-- Max tokens: 1024 (hardcoded in [index.ts](src/index.ts:102))
+- Max tokens: 1024 (hardcoded in [index.ts](src/index.ts:118))
 - Synchronous AppleScript execution (no parallelization)
 - No streaming response support
-- Context file path is hardcoded to `./tmp/ASSISTANT.md`
 - Default calendar hardcoded to `"nance.nick@gmail.com"` in calendar tools
 
 ### Code Style
