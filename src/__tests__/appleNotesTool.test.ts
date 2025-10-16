@@ -1,17 +1,17 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-	createSearchNotes,
 	createCreateNote,
 	createEditNote,
-	createListNotes,
 	createGetNoteContent,
-	searchNotes,
+	createListNotes,
 	createNote,
+	createSearchNotes,
 	editNote,
-	listNotes,
 	getNoteContent,
-	NotesManager,
+	listNotes,
 	type Note,
+	NotesManager,
+	searchNotes,
 } from "../tools/appleNotesTool";
 
 // Mock NotesManager for testing
@@ -37,10 +37,7 @@ class MockNotesManager extends NotesManager {
 		return this.mockData.createResult ?? null;
 	}
 
-	async editNote(
-		_noteTitle: string,
-		_newBody: string,
-	): Promise<string | null> {
+	async editNote(_noteTitle: string, _newBody: string): Promise<string | null> {
 		return this.mockData.editResult ?? null;
 	}
 
@@ -165,9 +162,7 @@ describe("appleNotesTool", () => {
 		});
 
 		it("should return single note", async () => {
-			const mockNote: Note[] = [
-				{ id: "id1", name: "Note 1", body: "Body 1" },
-			];
+			const mockNote: Note[] = [{ id: "id1", name: "Note 1", body: "Body 1" }];
 
 			const mockManager = new MockNotesManager({
 				searchResults: mockNote,

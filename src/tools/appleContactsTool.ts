@@ -355,7 +355,8 @@ export function createGetContact(
 	return {
 		tool: {
 			name: "getContact",
-			description: "Get a specific contact by name from the Apple Contacts app.",
+			description:
+				"Get a specific contact by name from the Apple Contacts app.",
 			input_schema: {
 				type: "object",
 				properties: { contactName: { type: "string" } },

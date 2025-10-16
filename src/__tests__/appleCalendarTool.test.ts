@@ -1,22 +1,22 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+	type CalendarEvent,
+	CalendarManager,
+	createCreateEvent,
+	createDeleteEvent,
+	createEvent,
+	createGetEventDetails,
+	createGetTodayEvents,
 	createListCalendars,
 	createListEvents,
 	createSearchEvents,
-	createCreateEvent,
-	createDeleteEvent,
-	createGetTodayEvents,
-	createGetEventDetails,
+	deleteEvent,
+	type EventDetail,
+	getEventDetails,
+	getTodayEvents,
 	listCalendars,
 	listEvents,
 	searchEvents,
-	createEvent,
-	deleteEvent,
-	getTodayEvents,
-	getEventDetails,
-	CalendarManager,
-	type CalendarEvent,
-	type EventDetail,
 } from "../tools/appleCalendarTool.js";
 
 // Mock CalendarManager for testing
