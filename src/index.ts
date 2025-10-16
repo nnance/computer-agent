@@ -6,8 +6,9 @@ import { appleContactsTools } from "./tools/appleContactsTool.js";
 import { appleNotesTools } from "./tools/appleNotesTool.js";
 import { bashTool } from "./tools/bashTool.js";
 import { handleView, textEditorTool } from "./tools/textEditorTool.js";
+import { isRunnableTool, type Tool } from "./tools/types.js";
+import { webFetchTool } from "./tools/webFetchTool.js";
 import { webSearchTool } from "./tools/webSearchTool.js";
-import {isRunnableTool, type Tool } from "./tools/types.js";
 
 const tools: Tool[] = [
 	...appleNotesTools,
@@ -16,11 +17,19 @@ const tools: Tool[] = [
 	textEditorTool,
 	bashTool,
 	webSearchTool,
+	webFetchTool,
 ];
 const contextFile = process.env.CONTEXT_FILE_PATH || "./.agent/ASSISTANT.md";
 const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-5";
-const maxTokens = Number.parseInt(process.env.ANTHROPIC_MAX_TOKENS || "1024", 10);
-const anthropic = new Anthropic();
+const maxTokens = Number.parseInt(
+	process.env.ANTHROPIC_MAX_TOKENS || "1024",
+	10,
+);
+const anthropic = new Anthropic({
+	defaultHeaders: {
+		"anthropic-beta": "web-fetch-2025-09-10",
+	},
+});
 const indicator = spinner();
 
 function loadContext(filePath: string): string {
@@ -29,7 +38,7 @@ function loadContext(filePath: string): string {
 	log.info(`Loaded context: ${contextInfo.length} characters.`);
 
 	const systemPrompt = `
-		You are a helpful assistant that can use tools to interact with the user's Apple Notes, Calendar, Contacts, local text files, execute bash commands, and search the web. Use the provided tools to fulfill user requests as needed.
+		You are a helpful assistant that can use tools to interact with the user's Apple Notes, Calendar, Contacts, local text files, execute bash commands, search the web, and fetch web content. Use the provided tools to fulfill user requests as needed.
 
 		Available context:
 		${contextInfo}
@@ -37,6 +46,8 @@ function loadContext(filePath: string): string {
 		When using tools, ensure the input is correctly formatted as JSON. If a tool returns an error or no result, inform the user appropriately.
 
 		When using web search, you can autonomously search for current information, recent events, or data beyond your knowledge cutoff. Search results will include citations.
+
+		When using web fetch, you can retrieve full text content from URLs (including PDFs). Use URLs from user messages or previous tool results - you cannot generate URLs yourself.
 		`;
 	return systemPrompt;
 }
@@ -135,7 +146,9 @@ async function sendMessage(
 			// Only collect results for locally-executed tools
 			// API-executed tools (like web_search) return null and are handled by the API
 			if (result !== null) {
-				indicator.stop(`Tool ${block.name}: ${!result.is_error ? "Success" : "Failed"}.`);
+				indicator.stop(
+					`Tool ${block.name}: ${!result.is_error ? "Success" : "Failed"}.`,
+				);
 				toolResults.push(result);
 			} else {
 				indicator.stop(`Tool ${block.name}: Executed by API`);
