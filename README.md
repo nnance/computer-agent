@@ -1,27 +1,45 @@
 # Computer Agent
 
-An AI-powered computer agent built with Anthropic's Claude Sonnet 4 model, designed for general-purpose computer tasks beyond just coding. This agent provides interactive, conversational access to your local files and macOS system applications through natural language commands.
+An AI-powered autonomous agent built with Anthropic's Claude Sonnet 4 model, designed to perform tasks autonomously in offline-first, non-interactive environments. The agent can be triggered by events or schedules, operate as part of pipelines or workflows, and process data in batches without requiring real-time user interaction.
 
 ## Overview
 
-Computer Agent is a command-line interface (CLI) tool that combines Claude's advanced language understanding with practical tools for managing your digital workspace. Unlike traditional coding assistants, this agent can interact with your Notes, Calendar, Contacts, and file system, making it ideal for productivity automation, personal information management, and general computer tasks.
+Computer Agent is an offline-first AI agent that minimizes reliance on external APIs and services, enabling autonomous task execution based on predefined criteria or triggers. It can operate in two modes:
+
+1. **Offline Mode (Primary)**: Runs autonomously as part of workflows, triggered by events or schedules, processing data in batches without user interaction
+2. **Interactive Mode**: Provides a conversational CLI interface for testing, debugging, and direct interaction using the same context and tools as offline mode
+
+This dual-mode approach ensures consistency between development and deployment while enabling both autonomous operation and hands-on control when needed.
 
 ## Use Cases
 
+### Autonomous Operations
+- **Scheduled Data Processing**: Run agents on a schedule to process batches of files, logs, or data
+- **Event-Driven Workflows**: Trigger agents based on file changes, system events, or custom triggers
+- **Pipeline Integration**: Integrate into CI/CD pipelines or data processing workflows
+- **Batch Automation**: Perform recurring tasks without user intervention (e.g., daily report generation, data cleanup)
+- **Monitoring & Alerts**: Autonomously monitor system state and take action based on predefined criteria
+
+### Interactive Operations
+- **Development & Testing**: Test agent behavior interactively before deploying to offline mode
 - **Personal Productivity**: Manage calendar events, notes, and contacts through conversation
 - **File Management**: Read, create, and modify files without leaving the terminal
 - **Information Retrieval**: Search across notes, events, and contacts with natural language
-- **Task Automation**: Chain multiple operations together (e.g., "Find my meeting notes and create a summary")
-- **Data Organization**: Create and organize information across Apple's native apps
 - **Quick Lookups**: Retrieve contact information, upcoming events, or note contents instantly
 
 ## Key Features
 
-### AI-Powered Interaction
+### Offline-First Architecture
+- **Autonomous Execution**: Operates without real-time user interaction, perfect for scheduled tasks and event-driven workflows
+- **Minimal External Dependencies**: Designed to minimize reliance on external APIs and services
+- **Non-Interactive by Default**: Optimized for batch processing and pipeline integration
+- **Dual-Mode Support**: Same agent, context, and tools work in both offline and interactive modes
+
+### AI-Powered Capabilities
 - **Claude Sonnet 4 Integration**: Leverages Anthropic's latest model for advanced natural language understanding and autonomous task execution
-- **Conversational Interface**: Interactive CLI using @clack/prompts for a smooth user experience
-- **Autonomous Agent Behavior**: Capable of multi-step task execution and tool chaining
+- **Multi-Step Reasoning**: Capable of complex task execution and tool chaining without user intervention
 - **Context-Aware**: Loads contextual information from files to provide personalized assistance
+- **Interactive Mode**: Optional conversational CLI using @clack/prompts for testing and debugging
 
 ### Apple Ecosystem Integration
 
@@ -64,7 +82,8 @@ Computer Agent is a command-line interface (CLI) tool that combines Claude's adv
 - **Modular Architecture**: Clean separation of concerns with dedicated tool modules
 - **AppleScript Integration**: Native macOS automation through AppleScript execution
 - **Error Handling**: Comprehensive error handling and user feedback
-- **Tool System**: Extensible RunnableTool interface for easy addition of new capabilities
+- **Tool System**: Extensible tool interface supporting both local execution (RunnableTool) and API-executed (PlainTool) patterns
+- **Batch Processing**: Optimized for non-interactive operation in pipelines and workflows
 
 ## Project Roadmap
 
@@ -106,10 +125,40 @@ The agent follows a modular architecture:
 
 4. Build and run:
    ```bash
+   # Interactive mode (for testing and debugging)
    npm start
+
+   # Non-interactive mode (for autonomous operation)
+   npm start -- -m "Your task here"
    ```
 
 5. Grant necessary macOS permissions when prompted (Contacts, Calendar, Notes access)
+
+### Running Modes
+
+#### Interactive Mode (Development & Testing)
+Start a conversational session to test agent behavior:
+```bash
+npm start
+```
+
+The agent will prompt you and wait for input. This mode uses the same context and tools as offline mode, ensuring consistency.
+
+#### Non-Interactive Mode (Autonomous Operation)
+Execute a single task without interaction:
+```bash
+# Using -m flag
+npm start -- -m "Process today's calendar events and create a summary"
+
+# Using --message flag
+npm start -- --message "Check for new files in ./data and process them"
+```
+
+This mode is ideal for:
+- Scheduled tasks (cron jobs, system timers)
+- Event-driven workflows (file watchers, webhooks)
+- CI/CD pipeline integration
+- Batch processing operations
 
 ## Configuration
 
