@@ -38,7 +38,10 @@ export async function processToolCall(
 		return {
 			type: "tool_result",
 			tool_use_id: toolUse.id,
-			content: result !== null && result !== undefined ? JSON.stringify(result) : "Error: No result returned",
+			content:
+				result !== null && result !== undefined
+					? JSON.stringify(result)
+					: "Error: No result returned",
 			is_error: result === null || result === undefined,
 		};
 	} catch (error) {
@@ -69,7 +72,7 @@ export async function sendMessage(
 	output: OutputHandler,
 	stopReasonFormatter: (reason: Anthropic.Messages.StopReason | null) => string,
 	depth = 0,
-	maxDepth = 10,
+	maxDepth = 20,
 ): Promise<Anthropic.Messages.MessageParam[]> {
 	// Check recursion depth limit to prevent infinite loops
 	if (depth >= maxDepth) {
@@ -78,6 +81,7 @@ export async function sendMessage(
 		throw new Error(errorMessage);
 	}
 
+	// TODO: Log depth only during debugging
 	if (depth > 0) {
 		output.showMessage(`Recursion depth: ${depth}/${maxDepth}`);
 	}
@@ -107,46 +111,51 @@ export async function sendMessage(
 			// Log error with context
 			output.showError(
 				`Anthropic API call failed (attempt ${attempt}/${maxRetries}): ` +
-				`${error instanceof Error ? error.message : String(error)} ` +
-				`[Model: ${model}, Tools: ${toolsList || 'none'}, System length: ${system.length}]`
+					`${error instanceof Error ? error.message : String(error)} ` +
+					`[Model: ${model}, Tools: ${toolsList || "none"}, System length: ${system.length}]`,
 			);
 
 			// Check if this is the last attempt
 			if (attempt === maxRetries) {
 				const enhancedError = new Error(
 					`Anthropic API call failed after ${maxRetries} attempts. ` +
-					`Model: ${model}, Tools: ${toolsCount > 0 ? `${toolsCount} tools (${toolsList})` : 'none'}, ` +
-					`System length: ${system.length}, Context messages: ${context.length}. ` +
-					`Original error: ${error instanceof Error ? error.message : String(error)}`
+						`Model: ${model}, Tools: ${toolsCount > 0 ? `${toolsCount} tools (${toolsList})` : "none"}, ` +
+						`System length: ${system.length}, Context messages: ${context.length}. ` +
+						`Original error: ${error instanceof Error ? error.message : String(error)}`,
 				);
 				enhancedError.cause = error;
 				throw enhancedError;
 			}
 
 			// Exponential backoff with jitter for transient errors
-			const isTransientError = error instanceof Error && (
-				error.message.includes("rate_limit") ||
-				error.message.includes("overloaded") ||
-				error.message.includes("timeout") ||
-				error.message.includes("503") ||
-				error.message.includes("502") ||
-				error.message.includes("500")
-			);
+			const isTransientError =
+				error instanceof Error &&
+				(error.message.includes("rate_limit") ||
+					error.message.includes("overloaded") ||
+					error.message.includes("timeout") ||
+					error.message.includes("503") ||
+					error.message.includes("502") ||
+					error.message.includes("500"));
 
 			if (isTransientError) {
-				const delay = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 1000;
-				output.showMessage(`Retrying in ${Math.round(delay)}ms due to transient error...`);
-				await new Promise(resolve => setTimeout(resolve, delay));
+				const delay =
+					baseDelay * Math.pow(2, attempt - 1) + Math.random() * 1000;
+				output.showMessage(
+					`Retrying in ${Math.round(delay)}ms due to transient error...`,
+				);
+				await new Promise((resolve) => setTimeout(resolve, delay));
 			} else {
 				// For non-transient errors, wait a shorter time
-				await new Promise(resolve => setTimeout(resolve, 500));
+				await new Promise((resolve) => setTimeout(resolve, 500));
 			}
 		}
 	}
 
 	// Ensure msg is defined after successful retry loop
 	if (!msg) {
-		throw new Error("Failed to get response from Anthropic API after all retry attempts");
+		throw new Error(
+			"Failed to get response from Anthropic API after all retry attempts",
+		);
 	}
 
 	messages.push({ role: "assistant", content: msg.content });
