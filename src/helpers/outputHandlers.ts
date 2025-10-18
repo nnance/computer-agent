@@ -118,7 +118,7 @@ export class JsonOutputHandler implements OutputHandler {
 
 	addToolCallResult(toolName: string, result: unknown, success: boolean): void {
 		// Find the most recent tool call with this name
-		const toolCall = this.data.toolCalls.find((tc) => tc.name === toolName);
+		const toolCall = this.data.toolCalls.findLast((tc) => tc.name === toolName);
 		if (toolCall) {
 			toolCall.result = result;
 			toolCall.success = success;

@@ -12,8 +12,8 @@ Interactive mode should still be supported to allow the user to engage with the 
 
 Minor improvements and bug fixes that enhance the current functionality.
 
-[ ] **Helper Functions**: Move parseArgs, output handler, and tool runner to separate modules in the helpers directory
-[ ] **Output Handling**: Improve output handling for better formatting and readability for non-interactive mode
+[x] **Output Handling**: Improve output handling for better formatting and readability for non-interactive mode
+[ ] **Helper Functions**: Move parseArgs and tool runner to separate modules in the helpers directory
 [ ] **Logging**: Implement structured logging system
 [ ] **Output Logging**: Remove hardcoded console logs and replace with a configurable logging system
 [x] **System Prompt**: Improve the default location of the system prompt and make it more customizable
