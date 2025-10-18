@@ -1,6 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { isRunnableTool, type Tool } from "../tools/types.js";
-import type { OutputHandler } from "./outputHandler.js";
+import type { OutputHandler } from "./outputHandlers.js";
+import { JsonOutputHandler } from "./outputHandlers.js";
 
 /**
  * Processes a single tool call from Claude
@@ -69,7 +70,7 @@ export async function sendMessage(
 	tools: Tool[],
 	system: string,
 	context: Anthropic.Messages.MessageParam[],
-	output: OutputHandler,
+	output: OutputHandler | JsonOutputHandler,
 	stopReasonFormatter: (reason: Anthropic.Messages.StopReason | null) => string,
 	depth = 0,
 	maxDepth = 20,
@@ -161,6 +162,16 @@ export async function sendMessage(
 	messages.push({ role: "assistant", content: msg.content });
 	output.stopThinking(stopReasonFormatter(msg.stop_reason));
 
+	// Add assistant message to JSON output
+	const isJsonOutput = output instanceof JsonOutputHandler;
+	if (isJsonOutput) {
+		output.addAssistantMessage(msg.content);
+		// Track usage if available
+		if (msg.usage) {
+			output.setUsage(msg.usage.input_tokens, msg.usage.output_tokens);
+		}
+	}
+
 	// Process the response
 	const toolResults: Anthropic.ToolResultBlockParam[] = [];
 
@@ -169,18 +180,32 @@ export async function sendMessage(
 			output.showMessage(block.text);
 		} else if (block.type === "tool_use") {
 			output.startTool(block.name);
+
+			// Track tool input for JSON output
+			if (isJsonOutput) {
+				output.addToolCallInput(block.name, block.input);
+			}
+
 			const result = await processToolCall(block, tools, output);
 			// Only collect results for locally-executed tools
 			// API-executed tools (like web_search) return null and are handled by the API
 			if (result !== null) {
-				output.stopTool(
-					block.name,
-					!result.is_error,
-					!result.is_error ? "Success" : "Failed",
-				);
+				const success = !result.is_error;
+				output.stopTool(block.name, success, success ? "Success" : "Failed");
+
+				// Track tool result for JSON output
+				if (isJsonOutput) {
+					output.addToolCallResult(block.name, result.content, success);
+				}
+
 				toolResults.push(result);
 			} else {
 				output.stopTool(block.name, true, "Executed by API");
+
+				// Track API-executed tool for JSON output
+				if (isJsonOutput) {
+					output.addToolCallResult(block.name, "Executed by API", true);
+				}
 			}
 		}
 	}

@@ -58,4 +58,74 @@ describe("parseArgs", () => {
 		expect(result.help).toBe(true);
 		expect(result.message).toBe("test");
 	});
+
+	it("should parse --format flag with json value", () => {
+		const result = parseArgs(["--format", "json"]);
+		expect(result.format).toBe("json");
+	});
+
+	it("should parse --format flag with text value", () => {
+		const result = parseArgs(["--format", "text"]);
+		expect(result.format).toBe("text");
+	});
+
+	it("should default format to text", () => {
+		const result = parseArgs([]);
+		expect(result.format).toBe("text");
+	});
+
+	it("should throw error when --format has invalid value", () => {
+		expect(() => parseArgs(["--format", "invalid"])).toThrow(
+			"--format must be either 'json' or 'text'",
+		);
+	});
+
+	it("should throw error when --format has no value", () => {
+		expect(() => parseArgs(["--format"])).toThrow(
+			"--format requires a format argument",
+		);
+	});
+
+	it("should parse -v flag", () => {
+		const result = parseArgs(["-v"]);
+		expect(result.verbose).toBe(true);
+	});
+
+	it("should parse --verbose flag", () => {
+		const result = parseArgs(["--verbose"]);
+		expect(result.verbose).toBe(true);
+	});
+
+	it("should parse -q flag", () => {
+		const result = parseArgs(["-q"]);
+		expect(result.verbose).toBe(false);
+	});
+
+	it("should parse --quiet flag", () => {
+		const result = parseArgs(["--quiet"]);
+		expect(result.verbose).toBe(false);
+	});
+
+	it("should default verbose to false", () => {
+		const result = parseArgs([]);
+		expect(result.verbose).toBe(false);
+	});
+
+	it("should handle multiple flags together", () => {
+		const result = parseArgs([
+			"-m",
+			"test message",
+			"--format",
+			"json",
+			"--verbose",
+		]);
+		expect(result.message).toBe("test message");
+		expect(result.format).toBe("json");
+		expect(result.verbose).toBe(true);
+	});
+
+	it("should handle quiet overriding verbose", () => {
+		const result = parseArgs(["--verbose", "--quiet"]);
+		expect(result.verbose).toBe(false);
+	});
 });

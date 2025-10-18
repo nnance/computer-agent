@@ -2,9 +2,10 @@ import "dotenv/config";
 import Anthropic from "@anthropic-ai/sdk";
 import { isCancel, log, text } from "@clack/prompts";
 import {
-	createInteractiveOutput,
-	createNonInteractiveOutput,
-} from "./helpers/outputHandler.js";
+	JsonOutputHandler,
+	TextOutputHandlerWithVisibility,
+	createOutputHandler,
+} from "./helpers/outputHandlers.js";
 import { parseArgs, showHelp } from "./helpers/parseArgs.js";
 import { sendMessage } from "./helpers/toolRunner.js";
 import { loadContext, stopReason } from "./helpers/utilities.js";
@@ -42,7 +43,7 @@ const anthropic = new Anthropic({
 
 async function runInteractiveMode(systemPrompt: string): Promise<void> {
 	const messages: Anthropic.Messages.MessageParam[] = [];
-	const output = createInteractiveOutput();
+	const output = new TextOutputHandlerWithVisibility();
 
 	let value = await text({
 		message: "How can I help you?",
@@ -76,11 +77,18 @@ async function runInteractiveMode(systemPrompt: string): Promise<void> {
 async function runNonInteractiveMode(
 	systemPrompt: string,
 	message: string,
+	format: "json" | "text",
+	verbose: boolean,
 ): Promise<void> {
 	const messages: Anthropic.Messages.MessageParam[] = [];
-	const output = createNonInteractiveOutput();
+	const output = createOutputHandler(format, verbose, model);
 
 	messages.push({ role: "user", content: message });
+
+	// Track user message for JSON output
+	if (output instanceof JsonOutputHandler) {
+		output.addUserMessage(message);
+	}
 
 	// Send the message to the model and get a final response
 	const newMessages = await sendMessage(
@@ -94,6 +102,11 @@ async function runNonInteractiveMode(
 		stopReason,
 	);
 	messages.push(...newMessages);
+
+	// Output JSON if that format was requested
+	if (output instanceof JsonOutputHandler) {
+		output.output();
+	}
 }
 
 async function main() {
@@ -112,7 +125,12 @@ async function main() {
 
 		if (parsed.message) {
 			// Non-interactive mode
-			await runNonInteractiveMode(systemPrompt, parsed.message);
+			await runNonInteractiveMode(
+				systemPrompt,
+				parsed.message,
+				parsed.format,
+				parsed.verbose,
+			);
 		} else {
 			// Interactive mode
 			await runInteractiveMode(systemPrompt);

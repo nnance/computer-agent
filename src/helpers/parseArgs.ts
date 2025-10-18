@@ -1,12 +1,18 @@
-interface ParsedArgs {
+export type OutputFormat = "json" | "text";
+
+export interface ParsedArgs {
 	message: string | undefined;
 	help: boolean;
+	format: OutputFormat;
+	verbose: boolean;
 }
 
 export function parseArgs(args: string[]): ParsedArgs {
 	const result: ParsedArgs = {
 		message: undefined,
 		help: false,
+		format: "text",
+		verbose: false,
 	};
 
 	for (let i = 0; i < args.length; i++) {
@@ -27,6 +33,24 @@ export function parseArgs(args: string[]): ParsedArgs {
 			} else {
 				throw new Error(`${arg} requires a non-empty message argument`);
 			}
+		} else if (arg === "--format") {
+			const nextArg = args[i + 1];
+			if (nextArg !== undefined) {
+				if (nextArg === "json" || nextArg === "text") {
+					result.format = nextArg;
+					i++;
+				} else {
+					throw new Error(
+						`${arg} must be either 'json' or 'text', got '${nextArg}'`,
+					);
+				}
+			} else {
+				throw new Error(`${arg} requires a format argument (json or text)`);
+			}
+		} else if (arg === "--verbose" || arg === "-v") {
+			result.verbose = true;
+		} else if (arg === "--quiet" || arg === "-q") {
+			result.verbose = false;
 		} else if (!arg.startsWith("-")) {
 			// If no flag and no message yet, treat as message
 			if (result.message === undefined) {
@@ -49,10 +73,19 @@ Usage:
   npm start -- -h              Show this help message
   npm start -- --help          Show this help message
 
+Options:
+  -m, --message <text>         Message to send (enables non-interactive mode)
+  -h, --help                   Show this help message
+  --format <json|text>         Output format for non-interactive mode (default: text)
+  -v, --verbose                Show detailed tool execution information
+  -q, --quiet                  Minimal output (only final responses)
+
 Examples:
   npm start
   npm start -- -m "What's on my calendar today?"
-  npm start -- --message "Add a note titled 'Meeting' with content 'Discuss project'"
+  npm start -- -m "Search for TypeScript best practices" --verbose
+  npm start -- -m "List my notes" --format json
+  npm start -- --message "Add a note" --quiet
 
 Interactive Mode:
   When started without arguments, enters interactive mode where you can
@@ -61,5 +94,13 @@ Interactive Mode:
 Non-Interactive Mode:
   When started with -m or --message, sends a single message and exits
   after receiving the complete response.
+
+  Output Formats:
+    text (default) - Human-readable formatted output
+    json           - Structured JSON output for programmatic use
+
+  Verbosity Levels:
+    --verbose - Show thinking indicators and tool execution details
+    --quiet   - Only show final assistant responses (default)
 `);
 }
