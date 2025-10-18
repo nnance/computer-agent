@@ -78,6 +78,8 @@ type GrepToolInput = z.infer<typeof GrepInputSchema>;
 /**
  * Builds the ripgrep command from input parameters
  */
+
+// TODO: Display warning if the grep tool (rg) is not installed
 function buildGrepCommand(input: GrepToolInput): string {
 	const args: string[] = ["rg"];
 
