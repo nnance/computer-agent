@@ -1,6 +1,12 @@
 import "dotenv/config";
 import Anthropic from "@anthropic-ai/sdk";
 import { isCancel, log, spinner, text } from "@clack/prompts";
+import {
+	JsonOutputHandler,
+	type OutputHandler,
+	TextOutputHandlerWithVisibility,
+	createOutputHandler,
+} from "./helpers/outputHandlers.js";
 import { parseArgs, showHelp } from "./parseArgs.js";
 import { appleCalendarTools } from "./tools/appleCalendarTool.js";
 import { appleContactsTools } from "./tools/appleContactsTool.js";
@@ -11,17 +17,6 @@ import { handleView, textEditorTool } from "./tools/textEditorTool.js";
 import { isRunnableTool, type Tool } from "./tools/types.js";
 import { webFetchTool } from "./tools/webFetchTool.js";
 import { webSearchTool } from "./tools/webSearchTool.js";
-
-// Output interface for different modes
-interface OutputHandler {
-	startThinking: () => void;
-	stopThinking: (message: string) => void;
-	startTool: (toolName: string) => void;
-	stopTool: (toolName: string, success: boolean, message: string) => void;
-	showMessage: (message: string) => void;
-	showSuccess: (message: string) => void;
-	showError: (message: string) => void;
-}
 
 const tools: Tool[] = [
 	...appleNotesTools,
@@ -44,28 +39,6 @@ const anthropic = new Anthropic({
 		"anthropic-beta": "web-fetch-2025-09-10",
 	},
 });
-const indicator = spinner();
-const interactiveOutput: OutputHandler = {
-	startThinking: () => indicator.start("Thinking..."),
-	stopThinking: (message: string) => indicator.stop(message),
-	startTool: (toolName: string) => indicator.start(`Using tool: ${toolName}`),
-	stopTool: (toolName: string, success: boolean, message: string) =>
-		indicator.stop(`Tool ${toolName}: ${message}`),
-	showMessage: (message: string) => log.message(message),
-	showSuccess: (message: string) => log.success(message),
-	showError: (message: string) => log.error(message),
-};
-
-// Non-interactive mode output handler
-const nonInteractiveOutput: OutputHandler = {
-	startThinking: () => {},
-	stopThinking: () => {},
-	startTool: () => {},
-	stopTool: () => {},
-	showMessage: (message: string) => console.log(message),
-	showSuccess: (message: string) => console.log(message),
-	showError: (message: string) => console.error(message),
-};
 
 function loadContext(filePath: string): string {
 	const contextInfo = handleView(filePath)?.content || "No context available";
@@ -155,9 +128,11 @@ async function processToolCall(
 async function sendMessage(
 	system: string,
 	context: Anthropic.Messages.MessageParam[],
-	output: OutputHandler,
+	output: OutputHandler | JsonOutputHandler,
 ): Promise<Anthropic.Messages.MessageParam[]> {
 	const messages: Anthropic.Messages.MessageParam[] = [];
+	const isJsonOutput = output instanceof JsonOutputHandler;
+
 	output.startThinking();
 
 	// Call the Anthropic API
@@ -171,6 +146,15 @@ async function sendMessage(
 	messages.push({ role: "assistant", content: msg.content });
 	output.stopThinking(stopReason(msg.stop_reason));
 
+	// Add assistant message to JSON output
+	if (isJsonOutput) {
+		output.addAssistantMessage(msg.content);
+		// Track usage if available
+		if (msg.usage) {
+			output.setUsage(msg.usage.input_tokens, msg.usage.output_tokens);
+		}
+	}
+
 	// Process the response
 	const toolResults: Anthropic.ToolResultBlockParam[] = [];
 
@@ -179,18 +163,32 @@ async function sendMessage(
 			output.showMessage(block.text);
 		} else if (block.type === "tool_use") {
 			output.startTool(block.name);
+
+			// Track tool input for JSON output
+			if (isJsonOutput) {
+				output.addToolCallInput(block.name, block.input);
+			}
+
 			const result = await processToolCall(block, output);
 			// Only collect results for locally-executed tools
 			// API-executed tools (like web_search) return null and are handled by the API
 			if (result !== null) {
-				output.stopTool(
-					block.name,
-					!result.is_error,
-					!result.is_error ? "Success" : "Failed",
-				);
+				const success = !result.is_error;
+				output.stopTool(block.name, success, success ? "Success" : "Failed");
+
+				// Track tool result for JSON output
+				if (isJsonOutput) {
+					output.addToolCallResult(block.name, result.content, success);
+				}
+
 				toolResults.push(result);
 			} else {
 				output.stopTool(block.name, true, "Executed by API");
+
+				// Track API-executed tool for JSON output
+				if (isJsonOutput) {
+					output.addToolCallResult(block.name, "Executed by API", true);
+				}
 			}
 		}
 	}
@@ -216,6 +214,7 @@ async function sendMessage(
 
 async function runInteractiveMode(systemPrompt: string): Promise<void> {
 	const messages: Anthropic.Messages.MessageParam[] = [];
+	const output = new TextOutputHandlerWithVisibility();
 
 	let value = await text({
 		message: "How can I help you?",
@@ -225,11 +224,7 @@ async function runInteractiveMode(systemPrompt: string): Promise<void> {
 		messages.push({ role: "user", content: value });
 
 		// Send the message to the model and get a final response
-		const newMessages = await sendMessage(
-			systemPrompt,
-			messages,
-			interactiveOutput,
-		);
+		const newMessages = await sendMessage(systemPrompt, messages, output);
 		messages.push(...newMessages);
 
 		// Prompt for the next input
@@ -244,18 +239,27 @@ async function runInteractiveMode(systemPrompt: string): Promise<void> {
 async function runNonInteractiveMode(
 	systemPrompt: string,
 	message: string,
+	format: "json" | "text",
+	verbose: boolean,
 ): Promise<void> {
 	const messages: Anthropic.Messages.MessageParam[] = [];
+	const output = createOutputHandler(format, verbose, model);
 
 	messages.push({ role: "user", content: message });
 
+	// Track user message for JSON output
+	if (output instanceof JsonOutputHandler) {
+		output.addUserMessage(message);
+	}
+
 	// Send the message to the model and get a final response
-	const newMessages = await sendMessage(
-		systemPrompt,
-		messages,
-		nonInteractiveOutput,
-	);
+	const newMessages = await sendMessage(systemPrompt, messages, output);
 	messages.push(...newMessages);
+
+	// Output JSON if that format was requested
+	if (output instanceof JsonOutputHandler) {
+		output.output();
+	}
 }
 
 async function main() {
@@ -274,7 +278,12 @@ async function main() {
 
 		if (parsed.message) {
 			// Non-interactive mode
-			await runNonInteractiveMode(systemPrompt, parsed.message);
+			await runNonInteractiveMode(
+				systemPrompt,
+				parsed.message,
+				parsed.format,
+				parsed.verbose,
+			);
 		} else {
 			// Interactive mode
 			await runInteractiveMode(systemPrompt);
