@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseArgs } from "../parseArgs.js";
+import { parseArgs } from "../../helpers/parseArgs.js";
 
 describe("parseArgs", () => {
 	it("should parse -h flag", () => {
