@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
-	JsonOutputHandler,
-	TextOutputHandlerQuiet,
-	TextOutputHandlerWithVisibility,
+	createInteractiveOutput,
+	createJsonOutput,
+	createNonInteractiveOutput,
 	createOutputHandler,
-} from "../helpers/outputHandlers.js";
+	isJsonOutputHandler,
+} from "../helpers/outputHandler.js";
 
-describe("JsonOutputHandler", () => {
+describe("createJsonOutput", () => {
 	it("should initialize with empty data", () => {
-		const handler = new JsonOutputHandler("test-model");
+		const handler = createJsonOutput("test-model");
 		const data = handler.getData();
 
 		expect(data.messages).toEqual([]);
@@ -18,7 +19,7 @@ describe("JsonOutputHandler", () => {
 	});
 
 	it("should add user message", () => {
-		const handler = new JsonOutputHandler("test-model");
+		const handler = createJsonOutput("test-model");
 		handler.addUserMessage("Hello");
 
 		const data = handler.getData();
@@ -32,8 +33,10 @@ describe("JsonOutputHandler", () => {
 	});
 
 	it("should add assistant message", () => {
-		const handler = new JsonOutputHandler("test-model");
-		const content = [{ type: "text" as const, text: "Hi there", citations: [] }];
+		const handler = createJsonOutput("test-model");
+		const content = [
+			{ type: "text" as const, text: "Hi there", citations: [] },
+		];
 		handler.addAssistantMessage(content);
 
 		const data = handler.getData();
@@ -43,7 +46,7 @@ describe("JsonOutputHandler", () => {
 	});
 
 	it("should track tool calls", () => {
-		const handler = new JsonOutputHandler("test-model");
+		const handler = createJsonOutput("test-model");
 
 		handler.startTool("test_tool");
 		handler.addToolCallInput("test_tool", { param: "value" });
@@ -57,7 +60,7 @@ describe("JsonOutputHandler", () => {
 	});
 
 	it("should track usage stats", () => {
-		const handler = new JsonOutputHandler("test-model");
+		const handler = createJsonOutput("test-model");
 		handler.setUsage(100, 50);
 
 		const data = handler.getData();
@@ -65,7 +68,7 @@ describe("JsonOutputHandler", () => {
 	});
 
 	it("should track stop reason", () => {
-		const handler = new JsonOutputHandler("test-model");
+		const handler = createJsonOutput("test-model");
 		handler.stopThinking("Max tokens reached");
 
 		const data = handler.getData();
@@ -73,9 +76,9 @@ describe("JsonOutputHandler", () => {
 	});
 });
 
-describe("TextOutputHandlerQuiet", () => {
+describe("createNonInteractiveOutput", () => {
 	it("should not throw errors when methods are called", () => {
-		const handler = new TextOutputHandlerQuiet();
+		const handler = createNonInteractiveOutput();
 
 		expect(() => handler.startThinking()).not.toThrow();
 		expect(() => handler.stopThinking("test")).not.toThrow();
@@ -84,9 +87,9 @@ describe("TextOutputHandlerQuiet", () => {
 	});
 });
 
-describe("TextOutputHandlerWithVisibility", () => {
+describe("createInteractiveOutput", () => {
 	it("should not throw errors when methods are called", () => {
-		const handler = new TextOutputHandlerWithVisibility();
+		const handler = createInteractiveOutput();
 
 		expect(() => handler.startThinking()).not.toThrow();
 		expect(() => handler.stopThinking("test")).not.toThrow();
@@ -98,16 +101,20 @@ describe("TextOutputHandlerWithVisibility", () => {
 describe("createOutputHandler", () => {
 	it("should create JsonOutputHandler for json format", () => {
 		const handler = createOutputHandler("json", false, "test-model");
-		expect(handler).toBeInstanceOf(JsonOutputHandler);
+		expect(isJsonOutputHandler(handler)).toBe(true);
 	});
 
-	it("should create TextOutputHandlerWithVisibility for text format with verbose", () => {
+	it("should create interactive output handler for text format with verbose", () => {
 		const handler = createOutputHandler("text", true, "test-model");
-		expect(handler).toBeInstanceOf(TextOutputHandlerWithVisibility);
+		expect(handler).toBeDefined();
+		expect(handler.startThinking).toBeInstanceOf(Function);
+		expect(handler.showMessage).toBeInstanceOf(Function);
 	});
 
-	it("should create TextOutputHandlerQuiet for text format without verbose", () => {
+	it("should create non-interactive output handler for text format without verbose", () => {
 		const handler = createOutputHandler("text", false, "test-model");
-		expect(handler).toBeInstanceOf(TextOutputHandlerQuiet);
+		expect(handler).toBeDefined();
+		expect(handler.startThinking).toBeInstanceOf(Function);
+		expect(handler.showMessage).toBeInstanceOf(Function);
 	});
 });

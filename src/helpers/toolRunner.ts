@@ -1,7 +1,10 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { isRunnableTool, type Tool } from "../tools/types.js";
-import type { OutputHandler } from "./outputHandlers.js";
-import { JsonOutputHandler } from "./outputHandlers.js";
+import {
+	isJsonOutputHandler,
+	type JsonOutputHandler,
+	type OutputHandler,
+} from "./outputHandler.js";
 
 /**
  * Processes a single tool call from Claude
@@ -140,8 +143,7 @@ export async function sendMessage(
 					error.message.includes("500"));
 
 			if (isTransientError) {
-				const delay =
-					baseDelay * Math.pow(2, attempt - 1) + Math.random() * 1000;
+				const delay = baseDelay * 2 ** (attempt - 1) + Math.random() * 1000;
 				output.showMessage(
 					`Retrying in ${Math.round(delay)}ms due to transient error...`,
 				);
@@ -164,7 +166,7 @@ export async function sendMessage(
 	output.stopThinking(stopReasonFormatter(msg.stop_reason));
 
 	// Add assistant message to JSON output
-	const isJsonOutput = output instanceof JsonOutputHandler;
+	const isJsonOutput = isJsonOutputHandler(output);
 	if (isJsonOutput) {
 		output.addAssistantMessage(msg.content);
 		// Track usage if available

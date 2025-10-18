@@ -1,11 +1,11 @@
 import "dotenv/config";
 import Anthropic from "@anthropic-ai/sdk";
 import { isCancel, log, text } from "@clack/prompts";
+import { createInteractiveOutput } from "./helpers/outputHandler.js";
 import {
-	JsonOutputHandler,
-	TextOutputHandlerWithVisibility,
 	createOutputHandler,
-} from "./helpers/outputHandlers.js";
+	isJsonOutputHandler,
+} from "./helpers/outputHandler.js";
 import { parseArgs, showHelp } from "./helpers/parseArgs.js";
 import { sendMessage } from "./helpers/toolRunner.js";
 import { loadContext, stopReason } from "./helpers/utilities.js";
@@ -43,7 +43,7 @@ const anthropic = new Anthropic({
 
 async function runInteractiveMode(systemPrompt: string): Promise<void> {
 	const messages: Anthropic.Messages.MessageParam[] = [];
-	const output = new TextOutputHandlerWithVisibility();
+	const output = createInteractiveOutput();
 
 	let value = await text({
 		message: "How can I help you?",
@@ -86,7 +86,7 @@ async function runNonInteractiveMode(
 	messages.push({ role: "user", content: message });
 
 	// Track user message for JSON output
-	if (output instanceof JsonOutputHandler) {
+	if (isJsonOutputHandler(output)) {
 		output.addUserMessage(message);
 	}
 
@@ -104,7 +104,7 @@ async function runNonInteractiveMode(
 	messages.push(...newMessages);
 
 	// Output JSON if that format was requested
-	if (output instanceof JsonOutputHandler) {
+	if (isJsonOutputHandler(output)) {
 		output.output();
 	}
 }
