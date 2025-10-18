@@ -21,11 +21,11 @@ export function parseArgs(args: string[]): ParsedArgs {
 		} else if (arg === "-m" || arg === "--message") {
 			// Next argument should be the message
 			const nextArg = args[i + 1];
-			if (nextArg !== undefined) {
+			if (nextArg !== undefined && !nextArg.startsWith("-") && nextArg.trim() !== "") {
 				result.message = nextArg;
 				i++; // Skip next argument as we've consumed it
 			} else {
-				throw new Error(`${arg} requires a message argument`);
+				throw new Error(`${arg} requires a non-empty message argument`);
 			}
 		} else if (!arg.startsWith("-")) {
 			// If no flag and no message yet, treat as message
