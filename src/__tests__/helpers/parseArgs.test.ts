@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseArgs } from "../../helpers/parseArgs.js";
 
+//TODO: fix the failing tests
 describe("parseArgs", () => {
 	it("should parse -h flag", () => {
 		const result = parseArgs(["-h"]);

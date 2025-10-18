@@ -5,6 +5,7 @@ import {
 	type OutputHandler,
 } from "../../helpers/outputHandler.js";
 
+// TODO: fix the failing tests
 describe("outputHandler", () => {
 	describe("createInteractiveOutput", () => {
 		it("should create an interactive output handler with all methods", () => {
