@@ -90,6 +90,7 @@ export async function sendMessage(
 	const messages: Anthropic.Messages.MessageParam[] = [];
 	output.startThinking();
 
+	// TODO: Remove retry and backoff logic, it's handled by the Anthropic SDK
 	// Call the Anthropic API with error handling and retry logic
 	let msg: Anthropic.Messages.Message | undefined;
 	const maxRetries = 3;

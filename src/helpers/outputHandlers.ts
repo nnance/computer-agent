@@ -34,6 +34,7 @@ export interface JsonOutputData {
 	};
 }
 
+// TODO: Move JSON output handler to outputHandler.ts and use the functional style there
 export class JsonOutputHandler implements OutputHandler {
 	private data: JsonOutputData;
 	private currentToolCall: {
