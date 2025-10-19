@@ -93,9 +93,7 @@ interface RunnableTool<T, U> {
 }
 ```
 
-**Critical**: The `input_schema` in the tool definition must exactly match the Zod schema structure. This duplication is required because:
-1. Claude API needs JSON Schema format (`input_schema`)
-2. Runtime validation uses Zod (`input` schema)
+**Schema Generation**: Use the `createRunnableTool()` factory function to automatically generate JSON Schema from Zod schemas, eliminating manual duplication. The factory uses Zod's built-in `toJSONSchema()` to convert your Zod schema to the JSON Schema format required by Claude's API.
 
 #### PlainTool (API-Executed)
 Tools executed by Claude's API (web search):
@@ -231,27 +229,48 @@ tool: {
 ### For Locally-Executed Tools (RunnableTool)
 
 1. Create a new file following the pattern: `[feature]Tool.ts`
-2. Define Zod input schema
-3. Create `RunnableTool` instance(s) with matching `input_schema` and Zod schema
-4. Export tool array (e.g., `export const myTools = [tool1, tool2]`)
+2. Define Zod input schema with descriptions using `.describe()`
+3. Use `createRunnableTool()` factory to create the tool with auto-generated JSON Schema
+4. Export the tool
 5. Import and add to `tools` array in [index.ts](src/index.ts:13-20)
 
-### For API-Executed Tools (PlainTool)
+**Example** (recommended pattern using `createRunnableTool`):
+```typescript
+import { z } from "zod";
+import { createRunnableTool } from "./types.js";
 
-1. Create a new file following the pattern: `[feature]Tool.ts`
-2. Export a `PlainTool` with only the tool definition
-3. Load any configuration from environment variables
-4. Import and add to `tools` array in [index.ts](src/index.ts:13-20)
+const MyInputSchema = z.object({
+  name: z.string().describe("The user's name"),
+  age: z.number().optional().describe("The user's age in years"),
+  active: z.boolean().default(true).describe("Whether the user is active"),
+});
 
-See [webSearchTool.ts](src/webSearchTool.ts) for a complete PlainTool example.
+type MyToolInput = z.infer<typeof MyInputSchema>;
 
-Example:
+export const myTool = createRunnableTool({
+  name: "my_tool",
+  description: "Does something useful with user data",
+  schema: MyInputSchema,
+  run: async (input: MyToolInput) => {
+    return `Hello, ${input.name}!`;
+  },
+});
+```
+
+**Key benefits**:
+- No manual JSON Schema duplication
+- Type-safe input validation
+- Descriptions from `.describe()` are automatically included in JSON Schema
+- Optional fields use `.optional()`
+- Default values use `.default(value)`
+
+**Legacy pattern** (manual schema definition):
 ```typescript
 import { z } from "zod";
 import type { RunnableTool } from "./types.js";
 
 const MyInputSchema = z.object({
-  param: z.string(),
+  param: z.string().describe("Parameter description"),
 });
 
 export const myTool: RunnableTool<z.infer<typeof MyInputSchema>, string> = {
@@ -261,7 +280,10 @@ export const myTool: RunnableTool<z.infer<typeof MyInputSchema>, string> = {
     input_schema: {
       type: "object",
       properties: {
-        param: { type: "string" },
+        param: {
+          type: "string",
+          description: "Parameter description"
+        },
       },
       required: ["param"],
     },
@@ -271,17 +293,35 @@ export const myTool: RunnableTool<z.infer<typeof MyInputSchema>, string> = {
     return "result";
   },
 };
-
-export const myTools = [myTool];
 ```
+
+**Note**: The legacy pattern with manual `input_schema` is still supported but not recommended. Use `createRunnableTool()` for new tools to eliminate duplication and reduce maintenance burden.
+
+### For API-Executed Tools (PlainTool)
+
+1. Create a new file following the pattern: `[feature]Tool.ts`
+2. Export a `PlainTool` with only the tool definition
+3. Load any configuration from environment variables
+4. Import and add to `tools` array in [index.ts](src/index.ts:13-20)
+
+See [webSearchTool.ts](src/tools/webSearchTool.ts) for a complete PlainTool example.
 
 ## Key Technical Details
 
 ### Dependencies
 - `@anthropic-ai/sdk`: Claude API client
-- `zod`: Runtime schema validation
+- `zod`: Runtime schema validation with JSON Schema generation
 - `@clack/prompts`: Interactive CLI prompts
 - `dotenv`: Environment variable management
+
+### Schema Utilities
+
+The project includes utilities in [schemaUtils.ts](src/tools/schemaUtils.ts) for working with Zod and JSON Schema:
+
+- **`zodToJsonSchema(zodSchema)`**: Converts a Zod schema to JSON Schema Draft 7 format compatible with Claude's API. Uses Zod's built-in `toJSONSchema()` method.
+- **`getRequiredFields(zodSchema)`**: Extracts required field names from a Zod object schema.
+
+These utilities are used internally by `createRunnableTool()` to automatically generate the `input_schema` from your Zod schema definitions.
 
 ### Environment
 - Requires `ANTHROPIC_API_KEY` in `.env`

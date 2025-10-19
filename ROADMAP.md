@@ -12,7 +12,7 @@ Interactive mode should still be supported to allow the user to engage with the 
 
 Minor improvements and bug fixes that enhance the current functionality.
 
-[ ] **Input Schema**: Use the JSON schema from ZOD schema for tool input schema to remove duplication
+[x] **Input Schema**: Use the JSON schema from ZOD schema for tool input schema to remove duplication
 [x] **Helper Functions**: Move parseArgs, output handler, and tool runner to separate modules in the helpers directory
 [x] **Output Handling**: Improve output handling for better formatting and readability for non-interactive mode
 [ ] **Logging**: Implement structured logging system
