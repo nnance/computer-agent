@@ -34,11 +34,11 @@ const textEditorTool: RunnableTool<EditorToolInput, EditorResult> = {
 		max_characters: 10000,
 	},
 	input: TextEditorInputSchema,
-	run: async (input) => {
+	run: async (input, output) => {
 		const result = handleEditorTool(input);
-		console.log(`Result: ${result.success ? "✓ Success" : "✗ Failed"}`);
+		output?.showDebug(`Result: ${result.success ? "✓ Success" : "✗ Failed"}`);
 		if (result.error) {
-			console.log(`Error: ${result.error}`);
+			output?.showError(`Error: ${result.error}`);
 		}
 		return result;
 	},

@@ -1,6 +1,7 @@
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { z } from "zod";
+import type { OutputHandler } from "../helpers/outputHandler.js";
 import { createRunnableTool } from "./types.js";
 
 export interface Contact {
@@ -15,20 +16,20 @@ export interface Contact {
 export class ContactsManager {
 	private execAsync = promisify(exec);
 
-	async executeAppleScript(script: string) {
+	async executeAppleScript(script: string, output?: OutputHandler) {
 		try {
 			const { stdout, stderr } = await this.execAsync(
 				`osascript -e '${script}'`,
 			);
-			if (stderr) console.error("AppleScript error:", stderr);
+			if (stderr) output?.showDebug(`AppleScript error: ${stderr}`, "error");
 			return stdout.trim();
 		} catch (error: unknown) {
-			console.error("Error executing AppleScript:", (error as Error).message);
+			output?.showDebug(`Error executing AppleScript: ${(error as Error).message}`, "error");
 			return null;
 		}
 	}
 
-	async searchContacts(query: string): Promise<Contact[] | null> {
+	async searchContacts(query: string, output?: OutputHandler): Promise<Contact[] | null> {
 		const script = `
       tell application "Contacts"
         set searchResults to ""
@@ -67,7 +68,7 @@ export class ContactsManager {
       end tell
     `;
 
-		const result = await this.executeAppleScript(script);
+		const result = await this.executeAppleScript(script, output);
 		if (result) {
 			const contactStrings = result.split(":::");
 			const contacts: Contact[] = contactStrings.map((contactStr) => {
@@ -93,6 +94,7 @@ export class ContactsManager {
 		phone?: string,
 		organization?: string,
 		birthday?: string,
+		output?: OutputHandler,
 	) {
 		const script = `
       tell application "Contacts"
@@ -105,11 +107,11 @@ export class ContactsManager {
       end tell
     `;
 
-		const result = await this.executeAppleScript(script);
+		const result = await this.executeAppleScript(script, output);
 		return result;
 	}
 
-	async listContacts(): Promise<Contact[] | null> {
+	async listContacts(output?: OutputHandler): Promise<Contact[] | null> {
 		const script = `
       tell application "Contacts"
         set contactList to ""
@@ -146,7 +148,7 @@ export class ContactsManager {
       end tell
     `;
 
-		const result = await this.executeAppleScript(script);
+		const result = await this.executeAppleScript(script, output);
 		if (result) {
 			const contactStrings = result.split(":::");
 			const contacts: Contact[] = contactStrings.map((contactStr) => {
@@ -166,7 +168,7 @@ export class ContactsManager {
 		return null;
 	}
 
-	async getContact(contactName: string): Promise<Contact | null> {
+	async getContact(contactName: string, output?: OutputHandler): Promise<Contact | null> {
 		const script = `
       tell application "Contacts"
         repeat with p in people
@@ -201,7 +203,7 @@ export class ContactsManager {
       end tell
     `;
 
-		const result = await this.executeAppleScript(script);
+		const result = await this.executeAppleScript(script, output);
 		if (result && !result.includes("Contact not found")) {
 			const [id, name, emailsStr, phonesStr, organization, birthday] =
 				result.split("|||");
@@ -233,13 +235,13 @@ export function createSearchContacts(
 		description:
 			"Search contacts in the Apple Contacts app by name or organization.",
 		schema: SearchContactsInputSchema,
-		run: async ({ query }) => {
-			const result = await contactsManager.searchContacts(query);
-			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+		run: async ({ query }, output) => {
+			const result = await contactsManager.searchContacts(query, output);
+			output?.showDebug(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
 			if (!result) {
-				console.log(`Error: No contacts found or error occurred.`);
+				output?.showDebug(`Error: No contacts found or error occurred.`, "error");
 			} else {
-				console.log(`Found ${result.length} contact(s).`);
+				output?.showDebug(`Found ${result.length} contact(s).`);
 			}
 			return result;
 		},
@@ -271,17 +273,18 @@ export function createCreateContact(
 		name: "createContact",
 		description: "Create a new contact in the Apple Contacts app.",
 		schema: CreateContactInputSchema,
-		run: async ({ name, email, phone, organization, birthday }) => {
+		run: async ({ name, email, phone, organization, birthday }, output) => {
 			const result = await contactsManager.createContact(
 				name,
 				email,
 				phone,
 				organization,
 				birthday,
+				output,
 			);
-			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+			output?.showDebug(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
 			if (!result) {
-				console.log(`Error creating contact.`);
+				output?.showDebug(`Error creating contact.`, "error");
 				return "Error creating contact";
 			}
 			return result;
@@ -303,13 +306,13 @@ export function createListContacts(
 		name: "listContacts",
 		description: "List all contacts in the Apple Contacts app.",
 		schema: ListContactsInputSchema,
-		run: async () => {
-			const result = await contactsManager.listContacts();
-			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+		run: async (_input, output) => {
+			const result = await contactsManager.listContacts(output);
+			output?.showDebug(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
 			if (!result) {
-				console.log(`Error: No contacts found or error occurred.`);
+				output?.showDebug(`Error: No contacts found or error occurred.`, "error");
 			} else {
-				console.log(`Found ${result.length} contact(s).`);
+				output?.showDebug(`Found ${result.length} contact(s).`);
 			}
 			return result;
 		},
@@ -333,11 +336,11 @@ export function createGetContact(
 		description:
 			"Get a specific contact by name from the Apple Contacts app.",
 		schema: GetContactInputSchema,
-		run: async ({ contactName }) => {
-			const result = await contactsManager.getContact(contactName);
-			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+		run: async ({ contactName }, output) => {
+			const result = await contactsManager.getContact(contactName, output);
+			output?.showDebug(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
 			if (!result) {
-				console.log(`Error: Contact not found or error occurred.`);
+				output?.showDebug(`Error: Contact not found or error occurred.`, "error");
 				return null;
 			}
 			return result;

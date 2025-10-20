@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	createCreateNote,
 	createEditNote,
@@ -50,18 +50,23 @@ class MockNotesManager extends NotesManager {
 	}
 }
 
+// Mock OutputHandler for testing
+const mockOutput = {
+	startThinking: vi.fn(),
+	stopThinking: vi.fn(),
+	startTool: vi.fn(),
+	stopTool: vi.fn(),
+	showMessage: vi.fn(),
+	showSuccess: vi.fn(),
+	showError: vi.fn(),
+	showDebug: vi.fn(),
+	showHelp: vi.fn(),
+};
+
 describe("appleNotesTool", () => {
-	let consoleLogSpy: ReturnType<typeof vi.spyOn>;
-	let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
-
 	beforeEach(() => {
-		consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-		consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-	});
-
-	afterEach(() => {
-		consoleLogSpy.mockRestore();
-		consoleErrorSpy.mockRestore();
+		// Reset all mock function calls before each test
+		vi.clearAllMocks();
 	});
 
 	describe("Zod input validation", () => {
@@ -154,11 +159,9 @@ describe("appleNotesTool", () => {
 			});
 			const tool = createSearchNotes(mockManager);
 
-			const result = await tool.run({ query: "test" });
+			const result = await tool.run({ query: "test" }, mockOutput);
 
 			expect(result).toEqual(mockNotes);
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
-			expect(consoleLogSpy).toHaveBeenCalledWith("Found 2 note(s).");
 		});
 
 		it("should return single note", async () => {
@@ -169,7 +172,7 @@ describe("appleNotesTool", () => {
 			});
 			const tool = createSearchNotes(mockManager);
 
-			const result = await tool.run({ query: "test" });
+			const result = await tool.run({ query: "test" }, mockOutput);
 
 			expect(result).toEqual(mockNote);
 		});
@@ -180,10 +183,9 @@ describe("appleNotesTool", () => {
 			});
 			const tool = createSearchNotes(mockManager);
 
-			const result = await tool.run({ query: "test" });
+			const result = await tool.run({ query: "test" }, mockOutput);
 
 			expect(result).toBeNull();
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
 		});
 
 		it("should handle empty search results", async () => {
@@ -192,7 +194,7 @@ describe("appleNotesTool", () => {
 			});
 			const tool = createSearchNotes(mockManager);
 
-			const result = await tool.run({ query: "nonexistent" });
+			const result = await tool.run({ query: "nonexistent" }, mockOutput);
 
 			expect(result).toBeNull();
 		});
@@ -204,7 +206,7 @@ describe("appleNotesTool", () => {
 			});
 			const tool = createSearchNotes(mockManager);
 
-			await tool.run({ query: "test's note" });
+			await tool.run({ query: "test's note" }, mockOutput);
 
 			// This test is mainly to ensure no errors are thrown
 		});
@@ -217,13 +219,15 @@ describe("appleNotesTool", () => {
 			});
 			const tool = createCreateNote(mockManager);
 
-			const result = await tool.run({
-				title: "Test Note",
-				body: "Test body",
-			});
+			const result = await tool.run(
+				{
+					title: "Test Note",
+					body: "Test body",
+				},
+				mockOutput,
+			);
 
 			expect(result).toBe("Note created: Test Note");
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
 		});
 
 		it("should create note with only title", async () => {
@@ -232,7 +236,7 @@ describe("appleNotesTool", () => {
 			});
 			const tool = createCreateNote(mockManager);
 
-			const result = await tool.run({ title: "Test Note" });
+			const result = await tool.run({ title: "Test Note" }, mockOutput);
 
 			expect(result).toBe("Note created: Test Note");
 		});
@@ -243,10 +247,9 @@ describe("appleNotesTool", () => {
 			});
 			const tool = createCreateNote(mockManager);
 
-			const result = await tool.run({ title: "Test Note" });
+			const result = await tool.run({ title: "Test Note" }, mockOutput);
 
 			expect(result).toBe("Error creating note");
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
 		});
 	});
 
@@ -257,13 +260,15 @@ describe("appleNotesTool", () => {
 			});
 			const tool = createEditNote(mockManager);
 
-			const result = await tool.run({
-				noteTitle: "Test Note",
-				newBody: "Updated body",
-			});
+			const result = await tool.run(
+				{
+					noteTitle: "Test Note",
+					newBody: "Updated body",
+				},
+				mockOutput,
+			);
 
 			expect(result).toBe("Note updated: Test Note");
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
 		});
 
 		it("should return not found message", async () => {
@@ -272,10 +277,13 @@ describe("appleNotesTool", () => {
 			});
 			const tool = createEditNote(mockManager);
 
-			const result = await tool.run({
-				noteTitle: "Nonexistent Note",
-				newBody: "Body",
-			});
+			const result = await tool.run(
+				{
+					noteTitle: "Nonexistent Note",
+					newBody: "Body",
+				},
+				mockOutput,
+			);
 
 			expect(result).toBe("Note not found: Nonexistent Note");
 		});
@@ -286,13 +294,15 @@ describe("appleNotesTool", () => {
 			});
 			const tool = createEditNote(mockManager);
 
-			const result = await tool.run({
-				noteTitle: "Test Note",
-				newBody: "Body",
-			});
+			const result = await tool.run(
+				{
+					noteTitle: "Test Note",
+					newBody: "Body",
+				},
+				mockOutput,
+			);
 
 			expect(result).toBe("Error editing note");
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
 		});
 	});
 
@@ -309,11 +319,9 @@ describe("appleNotesTool", () => {
 			});
 			const tool = createListNotes(mockManager);
 
-			const result = await tool.run({});
+			const result = await tool.run({}, mockOutput);
 
 			expect(result).toEqual(mockNotes);
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
-			expect(consoleLogSpy).toHaveBeenCalledWith("Found 3 note(s).");
 		});
 
 		it("should return null when no notes found", async () => {
@@ -322,10 +330,9 @@ describe("appleNotesTool", () => {
 			});
 			const tool = createListNotes(mockManager);
 
-			const result = await tool.run({});
+			const result = await tool.run({}, mockOutput);
 
 			expect(result).toBeNull();
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
 		});
 
 		it("should handle AppleScript errors", async () => {
@@ -334,7 +341,7 @@ describe("appleNotesTool", () => {
 			});
 			const tool = createListNotes(mockManager);
 
-			const result = await tool.run({});
+			const result = await tool.run({}, mockOutput);
 
 			expect(result).toBeNull();
 		});
@@ -347,10 +354,9 @@ describe("appleNotesTool", () => {
 			});
 			const tool = createGetNoteContent(mockManager);
 
-			const result = await tool.run({ noteTitle: "Test Note" });
+			const result = await tool.run({ noteTitle: "Test Note" }, mockOutput);
 
 			expect(result).toBe("This is the note body content");
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
 		});
 
 		it("should return not found message", async () => {
@@ -359,9 +365,12 @@ describe("appleNotesTool", () => {
 			});
 			const tool = createGetNoteContent(mockManager);
 
-			const result = await tool.run({
-				noteTitle: "Nonexistent Note",
-			});
+			const result = await tool.run(
+				{
+					noteTitle: "Nonexistent Note",
+				},
+				mockOutput,
+			);
 
 			expect(result).toBe("Note not found: Nonexistent Note");
 		});
@@ -372,10 +381,9 @@ describe("appleNotesTool", () => {
 			});
 			const tool = createGetNoteContent(mockManager);
 
-			const result = await tool.run({ noteTitle: "Test Note" });
+			const result = await tool.run({ noteTitle: "Test Note" }, mockOutput);
 
 			expect(result).toBe("Error retrieving note content");
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
 		});
 
 		it("should handle empty note content", async () => {
@@ -384,7 +392,7 @@ describe("appleNotesTool", () => {
 			});
 			const tool = createGetNoteContent(mockManager);
 
-			const result = await tool.run({ noteTitle: "Empty Note" });
+			const result = await tool.run({ noteTitle: "Empty Note" }, mockOutput);
 
 			expect(result).toBe("Error retrieving note content");
 		});

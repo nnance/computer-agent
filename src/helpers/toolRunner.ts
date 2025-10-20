@@ -38,7 +38,7 @@ export async function processToolCall(
 	// Execute RunnableTool locally
 	try {
 		const input = tool.input.parse(toolUse.input);
-		const result = await tool.run(input as any);
+		const result = await tool.run(input as unknown, output);
 		return {
 			type: "tool_result",
 			tool_use_id: toolUse.id,

@@ -1,6 +1,7 @@
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { z } from "zod";
+import type { OutputHandler } from "../helpers/outputHandler.js";
 import { createRunnableTool } from "./types.js";
 
 // Load and validate required environment variable
@@ -27,20 +28,23 @@ export interface EventDetail extends CalendarEvent {
 export class CalendarManager {
 	private execAsync = promisify(exec);
 
-	async executeAppleScript(script: string) {
+	async executeAppleScript(script: string, output?: OutputHandler) {
 		try {
 			const { stdout, stderr } = await this.execAsync(
 				`osascript -e '${script}'`,
 			);
-			if (stderr) console.error("AppleScript error:", stderr);
+			if (stderr) output?.showDebug(`AppleScript error: ${stderr}`, "error");
 			return stdout.trim();
 		} catch (error: unknown) {
-			console.error("Error executing AppleScript:", (error as Error).message);
+			output?.showDebug(
+				`Error executing AppleScript: ${(error as Error).message}`,
+				"error",
+			);
 			return null;
 		}
 	}
 
-	async listCalendars(): Promise<string[] | null> {
+	async listCalendars(output?: OutputHandler): Promise<string[] | null> {
 		const script = `
       tell application "Calendar"
         set calendarList to {}
@@ -51,7 +55,7 @@ export class CalendarManager {
       end tell
     `;
 
-		const result = await this.executeAppleScript(script);
+		const result = await this.executeAppleScript(script, output);
 		// return as array
 		if (result) {
 			return result.split(", ");
@@ -62,6 +66,7 @@ export class CalendarManager {
 	async listEvents(
 		calendarName = DEFAULT_CALENDAR_NAME,
 		days = 7,
+		output?: OutputHandler,
 	): Promise<CalendarEvent[] | null> {
 		const script = `
       tell application "Calendar"
@@ -81,7 +86,7 @@ export class CalendarManager {
       end tell
     `;
 
-		const result = await this.executeAppleScript(script);
+		const result = await this.executeAppleScript(script, output);
 		// return as array of events with properties: summary, startDate, endDate, calendar
 		if (result) {
 			const eventStrings = result.split(":::");
@@ -98,6 +103,7 @@ export class CalendarManager {
 		query: string,
 		calendarName = DEFAULT_CALENDAR_NAME,
 		days = 90,
+		output?: OutputHandler,
 	): Promise<CalendarEvent[] | null> {
 		const script = `
       tell application "Calendar"
@@ -119,7 +125,7 @@ export class CalendarManager {
       end tell
     `;
 
-		const result = await this.executeAppleScript(script);
+		const result = await this.executeAppleScript(script, output);
 		if (result) {
 			const eventStrings = result.split(":::");
 			const events: CalendarEvent[] = eventStrings.map((eventStr) => {
@@ -137,6 +143,7 @@ export class CalendarManager {
 		startDate: string,
 		endDate: string,
 		description = "",
+		output?: OutputHandler,
 	) {
 		const script = `
       tell application "Calendar"
@@ -147,11 +154,15 @@ export class CalendarManager {
       end tell
     `;
 
-		const result = await this.executeAppleScript(script);
+		const result = await this.executeAppleScript(script, output);
 		return result;
 	}
 
-	async deleteEvent(calendarName: string, eventTitle: string) {
+	async deleteEvent(
+		calendarName: string,
+		eventTitle: string,
+		output?: OutputHandler,
+	) {
 		const script = `
       tell application "Calendar"
         tell calendar "${calendarName}"
@@ -172,18 +183,19 @@ export class CalendarManager {
       end tell
     `;
 
-		const result = await this.executeAppleScript(script);
+		const result = await this.executeAppleScript(script, output);
 		return result;
 	}
 
-	async getTodayEvents() {
+	async getTodayEvents(output?: OutputHandler) {
 		// Just use the optimized listEvents function with 1 day
-		return this.listEvents(DEFAULT_CALENDAR_NAME, 1);
+		return this.listEvents(DEFAULT_CALENDAR_NAME, 1, output);
 	}
 
 	async getEventDetails(
 		calendarName: string,
 		eventTitle: string,
+		output?: OutputHandler,
 	): Promise<EventDetail | null> {
 		const script = `
       tell application "Calendar"
@@ -198,7 +210,7 @@ export class CalendarManager {
       end tell
     `;
 
-		const result = await this.executeAppleScript(script);
+		const result = await this.executeAppleScript(script, output);
 		if (result) {
 			const [
 				summary,
@@ -235,13 +247,13 @@ export const createListCalendars = (
 		name: "listCalendars",
 		description: "List all available calendars in the Apple Calendar app.",
 		schema: ListCalendarsInputSchema,
-		run: async () => {
-			const result = await manager.listCalendars();
-			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+		run: async (_, output) => {
+			const result = await manager.listCalendars(output);
+			output?.showDebug(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
 			if (!result) {
-				console.log(`Error: No calendars found or error occurred.`);
+				output?.showDebug(`Error: No calendars found or error occurred.`, "error");
 			} else {
-				console.log(`Found ${result.length} calendar(s).`);
+				output?.showDebug(`Found ${result.length} calendar(s).`);
 			}
 			return result;
 		},
@@ -271,14 +283,14 @@ export const createListEvents = (
 		description:
 			"List upcoming events from a specific calendar within a specified number of days.",
 		schema: ListEventsInputSchema,
-		run: async (input) => {
+		run: async (input, output) => {
 			const { calendarName, days } = input;
-			const result = await manager.listEvents(calendarName, days);
-			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+			const result = await manager.listEvents(calendarName, days, output);
+			output?.showDebug(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
 			if (!result) {
-				console.log(`Error: No events found or error occurred.`);
+				output?.showDebug(`Error: No events found or error occurred.`, "error");
 			} else {
-				console.log(`Found ${result.length} event(s).`);
+				output?.showDebug(`Found ${result.length} event(s).`);
 			}
 			return result;
 		},
@@ -310,13 +322,13 @@ export const createSearchEvents = (
 		name: "searchEvents",
 		description: "Search for events in a calendar by title or description.",
 		schema: SearchEventsInputSchema,
-		run: async ({ query, calendarName, days }) => {
-			const result = await manager.searchEvents(query, calendarName, days);
-			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+		run: async ({ query, calendarName, days }, output) => {
+			const result = await manager.searchEvents(query, calendarName, days, output);
+			output?.showDebug(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
 			if (!result) {
-				console.log(`Error: No events found or error occurred.`);
+				output?.showDebug(`Error: No events found or error occurred.`, "error");
 			} else {
-				console.log(`Found ${result.length} event(s).`);
+				output?.showDebug(`Found ${result.length} event(s).`);
 			}
 			return result;
 		},
@@ -349,17 +361,18 @@ export const createCreateEvent = (
 		name: "createEvent",
 		description: "Create a new event in a specified calendar.",
 		schema: CreateEventInputSchema,
-		run: async ({ calendarName, title, startDate, endDate, description }) => {
+		run: async ({ calendarName, title, startDate, endDate, description }, output) => {
 			const result = await manager.createEvent(
 				calendarName,
 				title,
 				startDate,
 				endDate,
 				description,
+				output,
 			);
-			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+			output?.showDebug(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
 			if (!result) {
-				console.log(`Error creating event.`);
+				output?.showDebug(`Error creating event.`, "error");
 				return "Error creating event";
 			}
 			return result;
@@ -383,11 +396,11 @@ export const createDeleteEvent = (
 		name: "deleteEvent",
 		description: "Delete an event from a specified calendar by its title.",
 		schema: DeleteEventInputSchema,
-		run: async ({ calendarName, eventTitle }) => {
-			const result = await manager.deleteEvent(calendarName, eventTitle);
-			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+		run: async ({ calendarName, eventTitle }, output) => {
+			const result = await manager.deleteEvent(calendarName, eventTitle, output);
+			output?.showDebug(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
 			if (!result) {
-				console.log(`Error deleting event.`);
+				output?.showDebug(`Error deleting event.`, "error");
 				return "Error deleting event";
 			}
 			return result;
@@ -406,13 +419,13 @@ export const createGetTodayEvents = (
 		name: "getTodayEvents",
 		description: "Get all events for today from the default calendar.",
 		schema: GetTodayEventsInputSchema,
-		run: async () => {
-			const result = await manager.getTodayEvents();
-			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+		run: async (_, output) => {
+			const result = await manager.getTodayEvents(output);
+			output?.showDebug(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
 			if (!result) {
-				console.log(`Error: No events found or error occurred.`);
+				output?.showDebug(`Error: No events found or error occurred.`, "error");
 			} else {
-				console.log(`Found ${result.length} event(s) for today.`);
+				output?.showDebug(`Found ${result.length} event(s) for today.`);
 			}
 			return result;
 		},
@@ -436,11 +449,11 @@ export const createGetEventDetails = (
 		description:
 			"Get detailed information about a specific event including description, location, and URL.",
 		schema: GetEventDetailsInputSchema,
-		run: async ({ calendarName, eventTitle }) => {
-			const result = await manager.getEventDetails(calendarName, eventTitle);
-			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+		run: async ({ calendarName, eventTitle }, output) => {
+			const result = await manager.getEventDetails(calendarName, eventTitle, output);
+			output?.showDebug(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
 			if (!result) {
-				console.log(`Error: Event not found or error occurred.`);
+				output?.showDebug(`Error: Event not found or error occurred.`, "error");
 			}
 			return result;
 		},

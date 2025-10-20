@@ -1,5 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { z } from "zod";
+import type { z } from "zod";
+import type { OutputHandler } from "../helpers/outputHandler.js";
 import { zodToJsonSchema } from "./schemaUtils.js";
 
 /**
@@ -17,19 +18,19 @@ export interface PlainTool {
 export interface RunnableTool<T, U> {
 	tool: Anthropic.Tool | Anthropic.Messages.ToolUnion;
 	input: z.Schema<T>;
-	run: (input: T) => Promise<U>;
+	run: (input: T, output?: OutputHandler) => Promise<U>;
 }
 
 /**
  * Union type for all supported tool types.
  * Allows tools array to contain both API-executed and locally-executed tools.
  */
-export type Tool = PlainTool | RunnableTool<any, any>;
+export type Tool = PlainTool | RunnableTool<unknown, unknown>;
 
 /**
  * Type guard to check if a tool is a RunnableTool with local execution.
  */
-export function isRunnableTool(tool: Tool): tool is RunnableTool<any, any> {
+export function isRunnableTool(tool: Tool): tool is RunnableTool<unknown, unknown> {
 	return "run" in tool && "input" in tool;
 }
 
@@ -61,7 +62,7 @@ export function createRunnableTool<T, U>(config: {
 	name: string;
 	description: string;
 	schema: z.ZodSchema<T>;
-	run: (input: T) => Promise<U>;
+	run: (input: T, output?: OutputHandler) => Promise<U>;
 	type?: string;
 }): RunnableTool<T, U> {
 	const inputSchema = zodToJsonSchema(config.schema);

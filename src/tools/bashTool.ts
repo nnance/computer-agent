@@ -52,14 +52,14 @@ const bashTool: RunnableTool<BashToolInput, BashResult> = {
 		name: "bash",
 	},
 	input: BashInputSchema,
-	run: async (input) => {
+	run: async (input, output) => {
 		const result = await handleBashCommand(input);
-		console.log(`Result: ${result.success ? "✓ Success" : "✗ Failed"}`);
+		output?.showDebug(`Result: ${result.success ? "✓ Success" : "✗ Failed"}`);
 		if (result.stderr) {
-			console.log(`stderr: ${result.stderr}`);
+			output?.showDebug(`stderr: ${result.stderr}`);
 		}
 		if (result.error) {
-			console.log(`Error: ${result.error}`);
+			output?.showError(`Error: ${result.error}`);
 		}
 		return result;
 	},
@@ -205,8 +205,7 @@ async function updateSessionState(command: string): Promise<void> {
 			);
 			sessionWorkingDir = stdout.trim();
 		} catch (error) {
-			// If cd fails, keep the current directory
-			console.error("Failed to update working directory:", error);
+			// If cd fails, keep the current directory - silent failure
 		}
 	}
 

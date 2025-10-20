@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	type Contact,
 	ContactsManager,
@@ -49,18 +49,23 @@ class MockContactsManager extends ContactsManager {
 	}
 }
 
+// Mock OutputHandler for testing
+const mockOutput = {
+	startThinking: vi.fn(),
+	stopThinking: vi.fn(),
+	startTool: vi.fn(),
+	stopTool: vi.fn(),
+	showMessage: vi.fn(),
+	showSuccess: vi.fn(),
+	showError: vi.fn(),
+	showDebug: vi.fn(),
+	showHelp: vi.fn(),
+};
+
 describe("appleContactsTool", () => {
-	let consoleLogSpy: ReturnType<typeof vi.spyOn>;
-	let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
-
 	beforeEach(() => {
-		consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-		consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-	});
-
-	afterEach(() => {
-		consoleLogSpy.mockRestore();
-		consoleErrorSpy.mockRestore();
+		// Reset all mock function calls before each test
+		vi.clearAllMocks();
 	});
 
 	describe("Zod input validation", () => {
@@ -165,11 +170,9 @@ describe("appleContactsTool", () => {
 			});
 			const tool = createSearchContacts(mockManager);
 
-			const result = await tool.run({ query: "John" });
+			const result = await tool.run({ query: "John" }, mockOutput);
 
 			expect(result).toEqual(mockContacts);
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
-			expect(consoleLogSpy).toHaveBeenCalledWith("Found 2 contact(s).");
 		});
 
 		it("should handle contact with no emails or phones", async () => {
@@ -189,7 +192,7 @@ describe("appleContactsTool", () => {
 			});
 			const tool = createSearchContacts(mockManager);
 
-			const result = await tool.run({ query: "John" });
+			const result = await tool.run({ query: "John" }, mockOutput);
 
 			expect(result).toEqual(mockContact);
 		});
@@ -200,10 +203,9 @@ describe("appleContactsTool", () => {
 			});
 			const tool = createSearchContacts(mockManager);
 
-			const result = await tool.run({ query: "nonexistent" });
+			const result = await tool.run({ query: "nonexistent" }, mockOutput);
 
 			expect(result).toBeNull();
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
 		});
 
 		it("should handle AppleScript errors", async () => {
@@ -212,7 +214,7 @@ describe("appleContactsTool", () => {
 			});
 			const tool = createSearchContacts(mockManager);
 
-			const result = await tool.run({ query: "test" });
+			const result = await tool.run({ query: "test" }, mockOutput);
 
 			expect(result).toBeNull();
 		});
@@ -234,7 +236,7 @@ describe("appleContactsTool", () => {
 			});
 			const tool = createSearchContacts(mockManager);
 
-			const result = await tool.run({ query: "Acme" });
+			const result = await tool.run({ query: "Acme" }, mockOutput);
 
 			expect(result).toEqual(mockContact);
 		});
@@ -247,16 +249,18 @@ describe("appleContactsTool", () => {
 			});
 			const tool = createCreateContact(mockManager);
 
-			const result = await tool.run({
-				name: "John Doe",
-				email: "john@example.com",
-				phone: "555-1234",
-				organization: "Acme Corp",
-				birthday: "January 15, 1990",
-			});
+			const result = await tool.run(
+				{
+					name: "John Doe",
+					email: "john@example.com",
+					phone: "555-1234",
+					organization: "Acme Corp",
+					birthday: "January 15, 1990",
+				},
+				mockOutput,
+			);
 
 			expect(result).toBe("Contact created: John Doe");
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
 		});
 
 		it("should create contact with only name", async () => {
@@ -265,7 +269,7 @@ describe("appleContactsTool", () => {
 			});
 			const tool = createCreateContact(mockManager);
 
-			const result = await tool.run({ name: "John Doe" });
+			const result = await tool.run({ name: "John Doe" }, mockOutput);
 
 			expect(result).toBe("Contact created: John Doe");
 		});
@@ -276,10 +280,13 @@ describe("appleContactsTool", () => {
 			});
 			const tool = createCreateContact(mockManager);
 
-			const result = await tool.run({
-				name: "John Doe",
-				email: "john@example.com",
-			});
+			const result = await tool.run(
+				{
+					name: "John Doe",
+					email: "john@example.com",
+				},
+				mockOutput,
+			);
 
 			expect(result).toBe("Contact created: John Doe");
 		});
@@ -290,10 +297,13 @@ describe("appleContactsTool", () => {
 			});
 			const tool = createCreateContact(mockManager);
 
-			const result = await tool.run({
-				name: "John Doe",
-				phone: "555-1234",
-			});
+			const result = await tool.run(
+				{
+					name: "John Doe",
+					phone: "555-1234",
+				},
+				mockOutput,
+			);
 
 			expect(result).toBe("Contact created: John Doe");
 		});
@@ -304,10 +314,13 @@ describe("appleContactsTool", () => {
 			});
 			const tool = createCreateContact(mockManager);
 
-			const result = await tool.run({
-				name: "John Doe",
-				organization: "Acme Corp",
-			});
+			const result = await tool.run(
+				{
+					name: "John Doe",
+					organization: "Acme Corp",
+				},
+				mockOutput,
+			);
 
 			expect(result).toBe("Contact created: John Doe");
 		});
@@ -318,10 +331,13 @@ describe("appleContactsTool", () => {
 			});
 			const tool = createCreateContact(mockManager);
 
-			const result = await tool.run({
-				name: "John Doe",
-				birthday: "January 15, 1990",
-			});
+			const result = await tool.run(
+				{
+					name: "John Doe",
+					birthday: "January 15, 1990",
+				},
+				mockOutput,
+			);
 
 			expect(result).toBe("Contact created: John Doe");
 		});
@@ -332,10 +348,9 @@ describe("appleContactsTool", () => {
 			});
 			const tool = createCreateContact(mockManager);
 
-			const result = await tool.run({ name: "John Doe" });
+			const result = await tool.run({ name: "John Doe" }, mockOutput);
 
 			expect(result).toBe("Error creating contact");
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
 		});
 	});
 
@@ -373,11 +388,9 @@ describe("appleContactsTool", () => {
 			});
 			const tool = createListContacts(mockManager);
 
-			const result = await tool.run({});
+			const result = await tool.run({}, mockOutput);
 
 			expect(result).toEqual(mockContacts);
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
-			expect(consoleLogSpy).toHaveBeenCalledWith("Found 3 contact(s).");
 		});
 
 		it("should handle contacts with multiple emails and phones", async () => {
@@ -401,7 +414,7 @@ describe("appleContactsTool", () => {
 			});
 			const tool = createListContacts(mockManager);
 
-			const result = await tool.run({});
+			const result = await tool.run({}, mockOutput);
 
 			expect(result).toEqual(mockContacts);
 		});
@@ -412,10 +425,9 @@ describe("appleContactsTool", () => {
 			});
 			const tool = createListContacts(mockManager);
 
-			const result = await tool.run({});
+			const result = await tool.run({}, mockOutput);
 
 			expect(result).toBeNull();
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
 		});
 
 		it("should handle AppleScript errors", async () => {
@@ -424,7 +436,7 @@ describe("appleContactsTool", () => {
 			});
 			const tool = createListContacts(mockManager);
 
-			const result = await tool.run({});
+			const result = await tool.run({}, mockOutput);
 
 			expect(result).toBeNull();
 		});
@@ -446,10 +458,9 @@ describe("appleContactsTool", () => {
 			});
 			const tool = createGetContact(mockManager);
 
-			const result = await tool.run({ contactName: "John Doe" });
+			const result = await tool.run({ contactName: "John Doe" }, mockOutput);
 
 			expect(result).toEqual(mockContact);
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
 		});
 
 		it("should get contact with minimal information", async () => {
@@ -467,7 +478,7 @@ describe("appleContactsTool", () => {
 			});
 			const tool = createGetContact(mockManager);
 
-			const result = await tool.run({ contactName: "John Doe" });
+			const result = await tool.run({ contactName: "John Doe" }, mockOutput);
 
 			expect(result).toEqual(mockContact);
 		});
@@ -478,12 +489,14 @@ describe("appleContactsTool", () => {
 			});
 			const tool = createGetContact(mockManager);
 
-			const result = await tool.run({
-				contactName: "Nonexistent Person",
-			});
+			const result = await tool.run(
+				{
+					contactName: "Nonexistent Person",
+				},
+				mockOutput,
+			);
 
 			expect(result).toBeNull();
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
 		});
 
 		it("should handle AppleScript errors", async () => {
@@ -492,7 +505,7 @@ describe("appleContactsTool", () => {
 			});
 			const tool = createGetContact(mockManager);
 
-			const result = await tool.run({ contactName: "John Doe" });
+			const result = await tool.run({ contactName: "John Doe" }, mockOutput);
 
 			expect(result).toBeNull();
 		});
@@ -512,7 +525,7 @@ describe("appleContactsTool", () => {
 			});
 			const tool = createGetContact(mockManager);
 
-			const result = await tool.run({ contactName: "Jane Smith" });
+			const result = await tool.run({ contactName: "Jane Smith" }, mockOutput);
 
 			expect(result).toEqual(mockContact);
 		});

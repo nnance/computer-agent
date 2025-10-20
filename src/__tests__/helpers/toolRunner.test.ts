@@ -1,9 +1,9 @@
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import type { OutputHandler } from "../../helpers/outputHandler.js";
 import { processToolCall, sendMessage } from "../../helpers/toolRunner.js";
 import type { PlainTool, RunnableTool, Tool } from "../../tools/types.js";
-import { z } from "zod";
 
 describe("toolRunner", () => {
 	describe("processToolCall", () => {
@@ -23,6 +23,8 @@ describe("toolRunner", () => {
 				showMessage: vi.fn(),
 				showSuccess: vi.fn(),
 				showError: vi.fn(),
+				showDebug: vi.fn(),
+				showHelp: vi.fn(),
 			};
 
 			const result = await processToolCall(toolUse, [], mockOutput);
@@ -61,6 +63,8 @@ describe("toolRunner", () => {
 				showMessage: vi.fn(),
 				showSuccess: vi.fn(),
 				showError: vi.fn(),
+				showDebug: vi.fn(),
+				showHelp: vi.fn(),
 			};
 
 			const result = await processToolCall(toolUse, [plainTool], mockOutput);
@@ -106,15 +110,13 @@ describe("toolRunner", () => {
 				showMessage: vi.fn(),
 				showSuccess: vi.fn(),
 				showError: vi.fn(),
+				showDebug: vi.fn(),
+				showHelp: vi.fn(),
 			};
 
-			const result = await processToolCall(
-				toolUse,
-				[runnableTool],
-				mockOutput,
-			);
+			const result = await processToolCall(toolUse, [runnableTool], mockOutput);
 
-			expect(mockRun).toHaveBeenCalledWith({ message: "hello" });
+			expect(mockRun).toHaveBeenCalledWith({ message: "hello" }, mockOutput);
 			expect(result).toEqual({
 				type: "tool_result",
 				tool_use_id: "test-id",
@@ -159,13 +161,11 @@ describe("toolRunner", () => {
 				showMessage: vi.fn(),
 				showSuccess: vi.fn(),
 				showError: vi.fn(),
+				showDebug: vi.fn(),
+				showHelp: vi.fn(),
 			};
 
-			const result = await processToolCall(
-				toolUse,
-				[runnableTool],
-				mockOutput,
-			);
+			const result = await processToolCall(toolUse, [runnableTool], mockOutput);
 
 			expect(result?.is_error).toBe(true);
 			expect(result?.content).toContain("Error: Invalid input");
@@ -200,6 +200,8 @@ describe("toolRunner", () => {
 				showMessage: vi.fn(),
 				showSuccess: vi.fn(),
 				showError: vi.fn(),
+				showDebug: vi.fn(),
+				showHelp: vi.fn(),
 			};
 
 			const tools: Tool[] = [];
@@ -310,6 +312,8 @@ describe("toolRunner", () => {
 				showMessage: vi.fn(),
 				showSuccess: vi.fn(),
 				showError: vi.fn(),
+				showDebug: vi.fn(),
+				showHelp: vi.fn(),
 			};
 
 			const tools: Tool[] = [runnableTool];
@@ -330,7 +334,7 @@ describe("toolRunner", () => {
 
 			// Should have called API twice (initial + recursive)
 			expect(mockCreate).toHaveBeenCalledTimes(2);
-			expect(mockRun).toHaveBeenCalledWith({ query: "test" });
+			expect(mockRun).toHaveBeenCalledWith({ query: "test" }, mockOutput);
 
 			// Should return multiple messages (assistant tool use + user tool result + assistant final)
 			expect(result.length).toBeGreaterThan(1);

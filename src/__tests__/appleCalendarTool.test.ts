@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	type CalendarEvent,
 	CalendarManager,
@@ -84,18 +84,23 @@ class MockCalendarManager extends CalendarManager {
 	}
 }
 
+// Mock OutputHandler for testing
+const mockOutput = {
+	startThinking: vi.fn(),
+	stopThinking: vi.fn(),
+	startTool: vi.fn(),
+	stopTool: vi.fn(),
+	showMessage: vi.fn(),
+	showSuccess: vi.fn(),
+	showError: vi.fn(),
+	showDebug: vi.fn(),
+	showHelp: vi.fn(),
+};
+
 describe("appleCalendarTool", () => {
-	let consoleLogSpy: ReturnType<typeof vi.spyOn>;
-	let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
-
 	beforeEach(() => {
-		consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-		consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-	});
-
-	afterEach(() => {
-		consoleLogSpy.mockRestore();
-		consoleErrorSpy.mockRestore();
+		// Reset all mock function calls before each test
+		vi.clearAllMocks();
 	});
 
 	describe("Zod input validation", () => {
@@ -240,11 +245,9 @@ describe("appleCalendarTool", () => {
 			});
 			const tool = createListCalendars(mockManager);
 
-			const result = await tool.run({});
+			const result = await tool.run({}, mockOutput);
 
 			expect(result).toEqual(["Work", "Personal", "Family"]);
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
-			expect(consoleLogSpy).toHaveBeenCalledWith("Found 3 calendar(s).");
 		});
 
 		it("should return null when no calendars found", async () => {
@@ -253,10 +256,9 @@ describe("appleCalendarTool", () => {
 			});
 			const tool = createListCalendars(mockManager);
 
-			const result = await tool.run({});
+			const result = await tool.run({}, mockOutput);
 
 			expect(result).toBeNull();
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
 		});
 	});
 
@@ -281,11 +283,9 @@ describe("appleCalendarTool", () => {
 			});
 			const tool = createListEvents(mockManager);
 
-			const result = await tool.run({});
+			const result = await tool.run({}, mockOutput);
 
 			expect(result).toEqual(mockEvents);
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
-			expect(consoleLogSpy).toHaveBeenCalledWith("Found 2 event(s).");
 		});
 
 		it("should list events with custom calendar and days", async () => {
@@ -302,7 +302,10 @@ describe("appleCalendarTool", () => {
 			});
 			const tool = createListEvents(mockManager);
 
-			const result = await tool.run({ calendarName: "Work", days: 14 });
+			const result = await tool.run(
+				{ calendarName: "Work", days: 14 },
+				mockOutput,
+			);
 
 			expect(result).toEqual(mockEvents);
 		});
@@ -313,10 +316,9 @@ describe("appleCalendarTool", () => {
 			});
 			const tool = createListEvents(mockManager);
 
-			const result = await tool.run({});
+			const result = await tool.run({}, mockOutput);
 
 			expect(result).toBeNull();
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
 		});
 	});
 
@@ -335,11 +337,9 @@ describe("appleCalendarTool", () => {
 			});
 			const tool = createSearchEvents(mockManager);
 
-			const result = await tool.run({ query: "Team" });
+			const result = await tool.run({ query: "Team" }, mockOutput);
 
 			expect(result).toEqual(mockEvents);
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
-			expect(consoleLogSpy).toHaveBeenCalledWith("Found 1 event(s).");
 		});
 
 		it("should search with custom calendar and days", async () => {
@@ -356,11 +356,14 @@ describe("appleCalendarTool", () => {
 			});
 			const tool = createSearchEvents(mockManager);
 
-			const result = await tool.run({
-				query: "Meeting",
-				calendarName: "Work",
-				days: 30,
-			});
+			const result = await tool.run(
+				{
+					query: "Meeting",
+					calendarName: "Work",
+					days: 30,
+				},
+				mockOutput,
+			);
 
 			expect(result).toEqual(mockEvents);
 		});
@@ -371,10 +374,9 @@ describe("appleCalendarTool", () => {
 			});
 			const tool = createSearchEvents(mockManager);
 
-			const result = await tool.run({ query: "nonexistent" });
+			const result = await tool.run({ query: "nonexistent" }, mockOutput);
 
 			expect(result).toBeNull();
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
 		});
 	});
 
@@ -385,16 +387,18 @@ describe("appleCalendarTool", () => {
 			});
 			const tool = createCreateEvent(mockManager);
 
-			const result = await tool.run({
-				calendarName: "Work",
-				title: "Team Meeting",
-				startDate: "12/25/2024 10:00:00",
-				endDate: "12/25/2024 11:00:00",
-				description: "Weekly team sync",
-			});
+			const result = await tool.run(
+				{
+					calendarName: "Work",
+					title: "Team Meeting",
+					startDate: "12/25/2024 10:00:00",
+					endDate: "12/25/2024 11:00:00",
+					description: "Weekly team sync",
+				},
+				mockOutput,
+			);
 
 			expect(result).toBe("Event created: Team Meeting");
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
 		});
 
 		it("should create event without description", async () => {
@@ -403,12 +407,15 @@ describe("appleCalendarTool", () => {
 			});
 			const tool = createCreateEvent(mockManager);
 
-			const result = await tool.run({
-				calendarName: "Work",
-				title: "Meeting",
-				startDate: "12/25/2024 10:00:00",
-				endDate: "12/25/2024 11:00:00",
-			});
+			const result = await tool.run(
+				{
+					calendarName: "Work",
+					title: "Meeting",
+					startDate: "12/25/2024 10:00:00",
+					endDate: "12/25/2024 11:00:00",
+				},
+				mockOutput,
+			);
 
 			expect(result).toBe("Event created: Meeting");
 		});
@@ -419,15 +426,17 @@ describe("appleCalendarTool", () => {
 			});
 			const tool = createCreateEvent(mockManager);
 
-			const result = await tool.run({
-				calendarName: "Work",
-				title: "Meeting",
-				startDate: "12/25/2024 10:00:00",
-				endDate: "12/25/2024 11:00:00",
-			});
+			const result = await tool.run(
+				{
+					calendarName: "Work",
+					title: "Meeting",
+					startDate: "12/25/2024 10:00:00",
+					endDate: "12/25/2024 11:00:00",
+				},
+				mockOutput,
+			);
 
 			expect(result).toBe("Error creating event");
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
 		});
 	});
 
@@ -438,13 +447,15 @@ describe("appleCalendarTool", () => {
 			});
 			const tool = createDeleteEvent(mockManager);
 
-			const result = await tool.run({
-				calendarName: "Work",
-				eventTitle: "Team Meeting",
-			});
+			const result = await tool.run(
+				{
+					calendarName: "Work",
+					eventTitle: "Team Meeting",
+				},
+				mockOutput,
+			);
 
 			expect(result).toBe("Event deleted: Team Meeting");
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
 		});
 
 		it("should return not found message", async () => {
@@ -453,10 +464,13 @@ describe("appleCalendarTool", () => {
 			});
 			const tool = createDeleteEvent(mockManager);
 
-			const result = await tool.run({
-				calendarName: "Work",
-				eventTitle: "Nonexistent Meeting",
-			});
+			const result = await tool.run(
+				{
+					calendarName: "Work",
+					eventTitle: "Nonexistent Meeting",
+				},
+				mockOutput,
+			);
 
 			expect(result).toBe("Event not found: Nonexistent Meeting");
 		});
@@ -467,13 +481,15 @@ describe("appleCalendarTool", () => {
 			});
 			const tool = createDeleteEvent(mockManager);
 
-			const result = await tool.run({
-				calendarName: "Work",
-				eventTitle: "Meeting",
-			});
+			const result = await tool.run(
+				{
+					calendarName: "Work",
+					eventTitle: "Meeting",
+				},
+				mockOutput,
+			);
 
 			expect(result).toBe("Error deleting event");
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
 		});
 	});
 
@@ -498,11 +514,9 @@ describe("appleCalendarTool", () => {
 			});
 			const tool = createGetTodayEvents(mockManager);
 
-			const result = await tool.run({});
+			const result = await tool.run({}, mockOutput);
 
 			expect(result).toEqual(mockEvents);
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
-			expect(consoleLogSpy).toHaveBeenCalledWith("Found 2 event(s) for today.");
 		});
 
 		it("should return null when no events today", async () => {
@@ -511,10 +525,9 @@ describe("appleCalendarTool", () => {
 			});
 			const tool = createGetTodayEvents(mockManager);
 
-			const result = await tool.run({});
+			const result = await tool.run({}, mockOutput);
 
 			expect(result).toBeNull();
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
 		});
 	});
 
@@ -534,13 +547,15 @@ describe("appleCalendarTool", () => {
 			});
 			const tool = createGetEventDetails(mockManager);
 
-			const result = await tool.run({
-				calendarName: "Work",
-				eventTitle: "Team Meeting",
-			});
+			const result = await tool.run(
+				{
+					calendarName: "Work",
+					eventTitle: "Team Meeting",
+				},
+				mockOutput,
+			);
 
 			expect(result).toEqual(mockDetails);
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✓ Success");
 		});
 
 		it("should handle event with empty optional fields", async () => {
@@ -558,10 +573,13 @@ describe("appleCalendarTool", () => {
 			});
 			const tool = createGetEventDetails(mockManager);
 
-			const result = await tool.run({
-				calendarName: "Work",
-				eventTitle: "Meeting",
-			});
+			const result = await tool.run(
+				{
+					calendarName: "Work",
+					eventTitle: "Meeting",
+				},
+				mockOutput,
+			);
 
 			expect(result).toEqual(mockDetails);
 		});
@@ -572,13 +590,15 @@ describe("appleCalendarTool", () => {
 			});
 			const tool = createGetEventDetails(mockManager);
 
-			const result = await tool.run({
-				calendarName: "Work",
-				eventTitle: "Nonexistent Meeting",
-			});
+			const result = await tool.run(
+				{
+					calendarName: "Work",
+					eventTitle: "Nonexistent Meeting",
+				},
+				mockOutput,
+			);
 
 			expect(result).toBeNull();
-			expect(consoleLogSpy).toHaveBeenCalledWith("Result: ✗ Failed");
 		});
 	});
 

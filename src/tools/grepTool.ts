@@ -160,10 +160,10 @@ export const grepTool = createRunnableTool({
 	description:
 		"Powerful search tool built on ripgrep for searching file contents with regular expressions. Supports filtering by file type, glob patterns, and various output modes.",
 	schema: GrepInputSchema,
-	run: async (input) => {
+	run: async (input, output) => {
 		try {
 			const command = buildGrepCommand(input);
-			console.log(`Executing: ${command}`);
+			output?.showDebug(`Executing: ${command}`);
 
 			const { stdout, stderr } = await execAsync(command, {
 				timeout: 30000, // 30 second timeout
