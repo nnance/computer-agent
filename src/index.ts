@@ -1,8 +1,8 @@
 import "dotenv/config";
 import Anthropic from "@anthropic-ai/sdk";
 import { isCancel, log, text } from "@clack/prompts";
-import { createInteractiveOutput } from "./helpers/outputHandler.js";
 import {
+	createInteractiveOutput,
 	createOutputHandler,
 	isJsonOutputHandler,
 } from "./helpers/outputHandler.js";
@@ -41,9 +41,12 @@ const anthropic = new Anthropic({
 	},
 });
 
-async function runInteractiveMode(systemPrompt: string): Promise<void> {
+async function runInteractiveMode(
+	systemPrompt: string,
+	debug: boolean,
+): Promise<void> {
 	const messages: Anthropic.Messages.MessageParam[] = [];
-	const output = createInteractiveOutput();
+	const output = createInteractiveOutput(debug);
 
 	let value = await text({
 		message: "How can I help you?",
@@ -79,9 +82,10 @@ async function runNonInteractiveMode(
 	message: string,
 	format: "json" | "text",
 	verbose: boolean,
+	debug: boolean,
 ): Promise<void> {
 	const messages: Anthropic.Messages.MessageParam[] = [];
-	const output = createOutputHandler(format, verbose, model);
+	const output = createOutputHandler(format, verbose, debug, model);
 
 	messages.push({ role: "user", content: message });
 
@@ -112,14 +116,22 @@ async function runNonInteractiveMode(
 async function main() {
 	const systemPrompt = loadContext(contextFile);
 
+	// Read DEBUG environment variable (default: false)
+	const debugEnv = process.env.DEBUG === "true";
+
 	// Parse command-line arguments (skip first two: node and script path)
 	const args = process.argv.slice(2);
 
 	try {
 		const parsed = parseArgs(args);
 
+		// CLI debug flag overrides environment variable
+		const debug = parsed.debug || debugEnv;
+
 		if (parsed.help) {
-			showHelp();
+			// Create temporary output handler just for help text
+			const helpOutput = createInteractiveOutput(debug);
+			showHelp(helpOutput);
 			process.exit(0);
 		}
 
@@ -130,14 +142,20 @@ async function main() {
 				parsed.message,
 				parsed.format,
 				parsed.verbose,
+				debug,
 			);
 		} else {
 			// Interactive mode
-			await runInteractiveMode(systemPrompt);
+			await runInteractiveMode(systemPrompt, debug);
 		}
 	} catch (error) {
 		if (error instanceof Error) {
-			console.error(`Error: ${error.message}`);
+			const debug =
+				debugEnv ||
+				process.argv.includes("-d") ||
+				process.argv.includes("--debug");
+			const errorOutput = createInteractiveOutput(debug);
+			errorOutput.showError(`Error: ${error.message}`);
 			showHelp();
 			process.exit(1);
 		}

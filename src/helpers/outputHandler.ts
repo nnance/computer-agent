@@ -12,6 +12,8 @@ export interface OutputHandler {
 	showMessage: (message: string) => void;
 	showSuccess: (message: string) => void;
 	showError: (message: string) => void;
+	showDebug: (message: string, level?: "info" | "warn" | "error") => void;
+	showHelp: (helpText: string) => void;
 }
 
 /**
@@ -73,7 +75,7 @@ export function isJsonOutputHandler(
  * Creates an interactive output handler using @clack/prompts
  * Includes spinners and formatted output for better UX
  */
-export function createInteractiveOutput(): OutputHandler {
+export function createInteractiveOutput(debug: boolean = false): OutputHandler {
 	const indicator = spinner();
 
 	return {
@@ -85,6 +87,20 @@ export function createInteractiveOutput(): OutputHandler {
 		showMessage: (message: string) => log.message(message),
 		showSuccess: (message: string) => log.success(message),
 		showError: (message: string) => log.error(message),
+		showDebug: (message: string, level: "info" | "warn" | "error" = "info") => {
+			if (debug) {
+				if (level === "warn") {
+					log.warn(message);
+				} else if (level === "error") {
+					log.error(message);
+				} else {
+					log.info(message);
+				}
+			}
+		},
+		showHelp: (helpText: string) => {
+			log.message(helpText);
+		},
 	};
 }
 
@@ -92,7 +108,9 @@ export function createInteractiveOutput(): OutputHandler {
  * Creates a non-interactive output handler using plain console output
  * No spinners or special formatting - suitable for scripting and automation
  */
-export function createNonInteractiveOutput(): OutputHandler {
+export function createNonInteractiveOutput(
+	debug: boolean = false,
+): OutputHandler {
 	const indicator = spinner();
 
 	return {
@@ -104,6 +122,20 @@ export function createNonInteractiveOutput(): OutputHandler {
 		showMessage: (message: string) => log.message(message),
 		showSuccess: (message: string) => log.success(message),
 		showError: (message: string) => log.error(message),
+		showDebug: (message: string, level: "info" | "warn" | "error" = "info") => {
+			if (debug) {
+				if (level === "warn") {
+					log.warn(message);
+				} else if (level === "error") {
+					log.error(message);
+				} else {
+					log.info(message);
+				}
+			}
+		},
+		showHelp: (helpText: string) => {
+			process.stdout.write(`${helpText}\n`);
+		},
 	};
 }
 
@@ -111,7 +143,10 @@ export function createNonInteractiveOutput(): OutputHandler {
  * Creates a JSON output handler that collects all data for structured output
  * Uses functional programming style with closures to maintain state
  */
-export function createJsonOutput(model: string): JsonOutputHandler {
+export function createJsonOutput(
+	model: string,
+	debug: boolean = false,
+): JsonOutputHandler {
 	// Internal state managed via closures
 	const data: JsonOutputData = {
 		messages: [],
@@ -170,6 +205,23 @@ export function createJsonOutput(model: string): JsonOutputHandler {
 			// Error messages are part of tool results or assistant messages
 		},
 
+		showDebug: (message: string, level?: "info" | "warn" | "error") => {
+			if (debug) {
+				const color =
+					level === "error"
+						? "\x1b[31m"
+						: level === "warn"
+							? "\x1b[33m"
+							: "\x1b[90m";
+				const reset = "\x1b[0m";
+				process.stderr.write(`${color}[DEBUG]${reset} ${message}\n`);
+			}
+		},
+
+		showHelp: (_helpText: string) => {
+			// Silent in JSON mode - help text not needed
+		},
+
 		// JSON-specific methods
 		addUserMessage: (content: string) => {
 			data.messages.push({
@@ -222,15 +274,16 @@ export function createJsonOutput(model: string): JsonOutputHandler {
 export function createOutputHandler(
 	format: "json" | "text",
 	verbose: boolean,
+	debug: boolean,
 	model: string,
 ): OutputHandler | JsonOutputHandler {
 	if (format === "json") {
-		return createJsonOutput(model);
+		return createJsonOutput(model, debug);
 	}
 
 	if (verbose) {
-		return createInteractiveOutput();
+		return createInteractiveOutput(debug);
 	}
 
-	return createNonInteractiveOutput();
+	return createNonInteractiveOutput(debug);
 }
