@@ -1,7 +1,7 @@
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { z } from "zod";
-import type { RunnableTool } from "./types.js";
+import { createRunnableTool } from "./types.js";
 
 // Load and validate required environment variable
 const DEFAULT_CALENDAR_NAME = process.env.APPLE_CALENDAR_NAME;
@@ -230,27 +230,22 @@ export type ListCalendarsInput = z.infer<typeof ListCalendarsInputSchema>;
 
 export const createListCalendars = (
 	manager: CalendarManager = new CalendarManager(),
-): RunnableTool<ListCalendarsInput, string[] | null> => ({
-	tool: {
+) =>
+	createRunnableTool({
 		name: "listCalendars",
 		description: "List all available calendars in the Apple Calendar app.",
-		input_schema: {
-			type: "object",
-			properties: {},
+		schema: ListCalendarsInputSchema,
+		run: async () => {
+			const result = await manager.listCalendars();
+			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+			if (!result) {
+				console.log(`Error: No calendars found or error occurred.`);
+			} else {
+				console.log(`Found ${result.length} calendar(s).`);
+			}
+			return result;
 		},
-	},
-	input: ListCalendarsInputSchema,
-	run: async () => {
-		const result = await manager.listCalendars();
-		console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
-		if (!result) {
-			console.log(`Error: No calendars found or error occurred.`);
-		} else {
-			console.log(`Found ${result.length} calendar(s).`);
-		}
-		return result;
-	},
-});
+	});
 
 export const listCalendars = createListCalendars();
 
@@ -270,31 +265,24 @@ export type ListEventsInput = z.infer<typeof ListEventsInputSchema>;
 
 export const createListEvents = (
 	manager: CalendarManager = new CalendarManager(),
-): RunnableTool<ListEventsInput, CalendarEvent[] | null> => ({
-	tool: {
+) =>
+	createRunnableTool({
 		name: "listEvents",
 		description:
 			"List upcoming events from a specific calendar within a specified number of days.",
-		input_schema: {
-			type: "object",
-			properties: {
-				calendarName: { type: "string", nullable: true },
-				days: { type: "number", nullable: true },
-			},
+		schema: ListEventsInputSchema,
+		run: async (input) => {
+			const { calendarName, days } = input;
+			const result = await manager.listEvents(calendarName, days);
+			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+			if (!result) {
+				console.log(`Error: No events found or error occurred.`);
+			} else {
+				console.log(`Found ${result.length} event(s).`);
+			}
+			return result;
 		},
-	},
-	input: ListEventsInputSchema,
-	run: async ({ calendarName, days } = {}) => {
-		const result = await manager.listEvents(calendarName, days);
-		console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
-		if (!result) {
-			console.log(`Error: No events found or error occurred.`);
-		} else {
-			console.log(`Found ${result.length} event(s).`);
-		}
-		return result;
-	},
-});
+	});
 
 export const listEvents = createListEvents();
 
@@ -317,31 +305,22 @@ export type SearchEventsInput = z.infer<typeof SearchEventsInputSchema>;
 
 export const createSearchEvents = (
 	manager: CalendarManager = new CalendarManager(),
-): RunnableTool<SearchEventsInput, CalendarEvent[] | null> => ({
-	tool: {
+) =>
+	createRunnableTool({
 		name: "searchEvents",
 		description: "Search for events in a calendar by title or description.",
-		input_schema: {
-			type: "object",
-			properties: {
-				query: { type: "string" },
-				calendarName: { type: "string", nullable: true },
-				days: { type: "number", nullable: true },
-			},
+		schema: SearchEventsInputSchema,
+		run: async ({ query, calendarName, days }) => {
+			const result = await manager.searchEvents(query, calendarName, days);
+			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+			if (!result) {
+				console.log(`Error: No events found or error occurred.`);
+			} else {
+				console.log(`Found ${result.length} event(s).`);
+			}
+			return result;
 		},
-	},
-	input: SearchEventsInputSchema,
-	run: async ({ query, calendarName, days }) => {
-		const result = await manager.searchEvents(query, calendarName, days);
-		console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
-		if (!result) {
-			console.log(`Error: No events found or error occurred.`);
-		} else {
-			console.log(`Found ${result.length} event(s).`);
-		}
-		return result;
-	},
-});
+	});
 
 export const searchEvents = createSearchEvents();
 
@@ -365,38 +344,27 @@ export type CreateEventInput = z.infer<typeof CreateEventInputSchema>;
 
 export const createCreateEvent = (
 	manager: CalendarManager = new CalendarManager(),
-): RunnableTool<CreateEventInput, string> => ({
-	tool: {
+) =>
+	createRunnableTool({
 		name: "createEvent",
 		description: "Create a new event in a specified calendar.",
-		input_schema: {
-			type: "object",
-			properties: {
-				calendarName: { type: "string" },
-				title: { type: "string" },
-				startDate: { type: "string" },
-				endDate: { type: "string" },
-				description: { type: "string", nullable: true },
-			},
+		schema: CreateEventInputSchema,
+		run: async ({ calendarName, title, startDate, endDate, description }) => {
+			const result = await manager.createEvent(
+				calendarName,
+				title,
+				startDate,
+				endDate,
+				description,
+			);
+			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+			if (!result) {
+				console.log(`Error creating event.`);
+				return "Error creating event";
+			}
+			return result;
 		},
-	},
-	input: CreateEventInputSchema,
-	run: async ({ calendarName, title, startDate, endDate, description }) => {
-		const result = await manager.createEvent(
-			calendarName,
-			title,
-			startDate,
-			endDate,
-			description,
-		);
-		console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
-		if (!result) {
-			console.log(`Error creating event.`);
-			return "Error creating event";
-		}
-		return result;
-	},
-});
+	});
 
 export const createEvent = createCreateEvent();
 
@@ -410,29 +378,21 @@ export type DeleteEventInput = z.infer<typeof DeleteEventInputSchema>;
 
 export const createDeleteEvent = (
 	manager: CalendarManager = new CalendarManager(),
-): RunnableTool<DeleteEventInput, string> => ({
-	tool: {
+) =>
+	createRunnableTool({
 		name: "deleteEvent",
 		description: "Delete an event from a specified calendar by its title.",
-		input_schema: {
-			type: "object",
-			properties: {
-				calendarName: { type: "string" },
-				eventTitle: { type: "string" },
-			},
+		schema: DeleteEventInputSchema,
+		run: async ({ calendarName, eventTitle }) => {
+			const result = await manager.deleteEvent(calendarName, eventTitle);
+			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+			if (!result) {
+				console.log(`Error deleting event.`);
+				return "Error deleting event";
+			}
+			return result;
 		},
-	},
-	input: DeleteEventInputSchema,
-	run: async ({ calendarName, eventTitle }) => {
-		const result = await manager.deleteEvent(calendarName, eventTitle);
-		console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
-		if (!result) {
-			console.log(`Error deleting event.`);
-			return "Error deleting event";
-		}
-		return result;
-	},
-});
+	});
 
 export const deleteEvent = createDeleteEvent();
 
@@ -441,27 +401,22 @@ export type GetTodayEventsInput = z.infer<typeof GetTodayEventsInputSchema>;
 
 export const createGetTodayEvents = (
 	manager: CalendarManager = new CalendarManager(),
-): RunnableTool<GetTodayEventsInput, CalendarEvent[] | null> => ({
-	tool: {
+) =>
+	createRunnableTool({
 		name: "getTodayEvents",
 		description: "Get all events for today from the default calendar.",
-		input_schema: {
-			type: "object",
-			properties: {},
+		schema: GetTodayEventsInputSchema,
+		run: async () => {
+			const result = await manager.getTodayEvents();
+			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+			if (!result) {
+				console.log(`Error: No events found or error occurred.`);
+			} else {
+				console.log(`Found ${result.length} event(s) for today.`);
+			}
+			return result;
 		},
-	},
-	input: GetTodayEventsInputSchema,
-	run: async () => {
-		const result = await manager.getTodayEvents();
-		console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
-		if (!result) {
-			console.log(`Error: No events found or error occurred.`);
-		} else {
-			console.log(`Found ${result.length} event(s) for today.`);
-		}
-		return result;
-	},
-});
+	});
 
 export const getTodayEvents = createGetTodayEvents();
 
@@ -475,29 +430,21 @@ export type GetEventDetailsInput = z.infer<typeof GetEventDetailsInputSchema>;
 
 export const createGetEventDetails = (
 	manager: CalendarManager = new CalendarManager(),
-): RunnableTool<GetEventDetailsInput, EventDetail | null> => ({
-	tool: {
+) =>
+	createRunnableTool({
 		name: "getEventDetails",
 		description:
 			"Get detailed information about a specific event including description, location, and URL.",
-		input_schema: {
-			type: "object",
-			properties: {
-				calendarName: { type: "string" },
-				eventTitle: { type: "string" },
-			},
+		schema: GetEventDetailsInputSchema,
+		run: async ({ calendarName, eventTitle }) => {
+			const result = await manager.getEventDetails(calendarName, eventTitle);
+			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
+			if (!result) {
+				console.log(`Error: Event not found or error occurred.`);
+			}
+			return result;
 		},
-	},
-	input: GetEventDetailsInputSchema,
-	run: async ({ calendarName, eventTitle }) => {
-		const result = await manager.getEventDetails(calendarName, eventTitle);
-		console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
-		if (!result) {
-			console.log(`Error: Event not found or error occurred.`);
-		}
-		return result;
-	},
-});
+	});
 
 export const getEventDetails = createGetEventDetails();
 

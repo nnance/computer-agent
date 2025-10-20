@@ -1,7 +1,7 @@
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { z } from "zod";
-import type { RunnableTool } from "./types.js";
+import { createRunnableTool } from "./types.js";
 
 export interface Contact {
 	id: string;
@@ -225,20 +225,14 @@ export type SearchContactsInput = z.infer<typeof SearchContactsInputSchema>;
 
 export function createSearchContacts(
 	manager?: ContactsManager,
-): RunnableTool<SearchContactsInput, Contact[] | null> {
+) {
 	const contactsManager = manager || new ContactsManager();
 
-	return {
-		tool: {
-			name: "searchContacts",
-			description:
-				"Search contacts in the Apple Contacts app by name or organization.",
-			input_schema: {
-				type: "object",
-				properties: { query: { type: "string" } },
-			},
-		},
-		input: SearchContactsInputSchema,
+	return createRunnableTool({
+		name: "searchContacts",
+		description:
+			"Search contacts in the Apple Contacts app by name or organization.",
+		schema: SearchContactsInputSchema,
 		run: async ({ query }) => {
 			const result = await contactsManager.searchContacts(query);
 			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
@@ -249,7 +243,7 @@ export function createSearchContacts(
 			}
 			return result;
 		},
-	};
+	});
 }
 
 export const searchContacts = createSearchContacts();
@@ -270,25 +264,13 @@ export type CreateContactInput = z.infer<typeof CreateContactInputSchema>;
 
 export function createCreateContact(
 	manager?: ContactsManager,
-): RunnableTool<CreateContactInput, string> {
+) {
 	const contactsManager = manager || new ContactsManager();
 
-	return {
-		tool: {
-			name: "createContact",
-			description: "Create a new contact in the Apple Contacts app.",
-			input_schema: {
-				type: "object",
-				properties: {
-					name: { type: "string" },
-					email: { type: "string", nullable: true },
-					phone: { type: "string", nullable: true },
-					organization: { type: "string", nullable: true },
-					birthday: { type: "string", nullable: true },
-				},
-			},
-		},
-		input: CreateContactInputSchema,
+	return createRunnableTool({
+		name: "createContact",
+		description: "Create a new contact in the Apple Contacts app.",
+		schema: CreateContactInputSchema,
 		run: async ({ name, email, phone, organization, birthday }) => {
 			const result = await contactsManager.createContact(
 				name,
@@ -304,7 +286,7 @@ export function createCreateContact(
 			}
 			return result;
 		},
-	};
+	});
 }
 
 export const createContact = createCreateContact();
@@ -314,19 +296,13 @@ export type ListContactsInput = z.infer<typeof ListContactsInputSchema>;
 
 export function createListContacts(
 	manager?: ContactsManager,
-): RunnableTool<ListContactsInput, Contact[] | null> {
+) {
 	const contactsManager = manager || new ContactsManager();
 
-	return {
-		tool: {
-			name: "listContacts",
-			description: "List all contacts in the Apple Contacts app.",
-			input_schema: {
-				type: "object",
-				properties: {},
-			},
-		},
-		input: ListContactsInputSchema,
+	return createRunnableTool({
+		name: "listContacts",
+		description: "List all contacts in the Apple Contacts app.",
+		schema: ListContactsInputSchema,
 		run: async () => {
 			const result = await contactsManager.listContacts();
 			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
@@ -337,7 +313,7 @@ export function createListContacts(
 			}
 			return result;
 		},
-	};
+	});
 }
 
 export const listContacts = createListContacts();
@@ -349,20 +325,14 @@ export type GetContactInput = z.infer<typeof GetContactInputSchema>;
 
 export function createGetContact(
 	manager?: ContactsManager,
-): RunnableTool<GetContactInput, Contact | null> {
+) {
 	const contactsManager = manager || new ContactsManager();
 
-	return {
-		tool: {
-			name: "getContact",
-			description:
-				"Get a specific contact by name from the Apple Contacts app.",
-			input_schema: {
-				type: "object",
-				properties: { contactName: { type: "string" } },
-			},
-		},
-		input: GetContactInputSchema,
+	return createRunnableTool({
+		name: "getContact",
+		description:
+			"Get a specific contact by name from the Apple Contacts app.",
+		schema: GetContactInputSchema,
 		run: async ({ contactName }) => {
 			const result = await contactsManager.getContact(contactName);
 			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
@@ -372,7 +342,7 @@ export function createGetContact(
 			}
 			return result;
 		},
-	};
+	});
 }
 
 export const getContact = createGetContact();

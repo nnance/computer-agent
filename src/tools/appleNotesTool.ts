@@ -1,7 +1,7 @@
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { z } from "zod";
-import type { RunnableTool } from "./types.js";
+import { createRunnableTool } from "./types.js";
 
 export interface Note {
 	id: string;
@@ -132,19 +132,13 @@ export type QueryInput = z.infer<typeof QueryInputSchema>;
 
 export function createSearchNotes(
 	manager?: NotesManager,
-): RunnableTool<QueryInput, Note[] | null> {
+) {
 	const notesManager = manager || new NotesManager();
 
-	return {
-		tool: {
-			name: "searchNotes",
-			description: "Search notes in the Apple Notes app by title or content.",
-			input_schema: {
-				type: "object",
-				properties: { query: { type: "string" } },
-			},
-		},
-		input: QueryInputSchema,
+	return createRunnableTool({
+		name: "searchNotes",
+		description: "Search notes in the Apple Notes app by title or content.",
+		schema: QueryInputSchema,
 		run: async ({ query }) => {
 			const result = await notesManager.searchNotes(query);
 			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
@@ -155,7 +149,7 @@ export function createSearchNotes(
 			}
 			return result;
 		},
-	};
+	});
 }
 
 export const searchNotes = createSearchNotes();
@@ -168,22 +162,13 @@ export type CreateInput = z.infer<typeof CreateInputSchema>;
 
 export function createCreateNote(
 	manager?: NotesManager,
-): RunnableTool<CreateInput, string> {
+) {
 	const notesManager = manager || new NotesManager();
 
-	return {
-		tool: {
-			name: "createNote",
-			description: "Create a new note in the Apple Notes app.",
-			input_schema: {
-				type: "object",
-				properties: {
-					title: { type: "string" },
-					body: { type: "string", nullable: true },
-				},
-			},
-		},
-		input: CreateInputSchema,
+	return createRunnableTool({
+		name: "createNote",
+		description: "Create a new note in the Apple Notes app.",
+		schema: CreateInputSchema,
 		run: async ({ title, body }) => {
 			const result = await notesManager.createNote(title, body);
 			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
@@ -193,7 +178,7 @@ export function createCreateNote(
 			}
 			return result;
 		},
-	};
+	});
 }
 
 export const createNote = createCreateNote();
@@ -206,22 +191,13 @@ export type EditInput = z.infer<typeof EditInputSchema>;
 
 export function createEditNote(
 	manager?: NotesManager,
-): RunnableTool<EditInput, string> {
+) {
 	const notesManager = manager || new NotesManager();
 
-	return {
-		tool: {
-			name: "editNote",
-			description: "Edit an existing note in the Apple Notes app.",
-			input_schema: {
-				type: "object",
-				properties: {
-					noteTitle: { type: "string" },
-					newBody: { type: "string" },
-				},
-			},
-		},
-		input: EditInputSchema,
+	return createRunnableTool({
+		name: "editNote",
+		description: "Edit an existing note in the Apple Notes app.",
+		schema: EditInputSchema,
 		run: async ({ noteTitle, newBody }) => {
 			const result = await notesManager.editNote(noteTitle, newBody);
 			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
@@ -231,7 +207,7 @@ export function createEditNote(
 			}
 			return result;
 		},
-	};
+	});
 }
 
 export const editNote = createEditNote();
@@ -241,19 +217,13 @@ export type ListInput = z.infer<typeof ListInputSchema>;
 
 export function createListNotes(
 	manager?: NotesManager,
-): RunnableTool<ListInput, Note[] | null> {
+) {
 	const notesManager = manager || new NotesManager();
 
-	return {
-		tool: {
-			name: "listNotes",
-			description: "List all notes in the Apple Notes app.",
-			input_schema: {
-				type: "object",
-				properties: {},
-			},
-		},
-		input: ListInputSchema,
+	return createRunnableTool({
+		name: "listNotes",
+		description: "List all notes in the Apple Notes app.",
+		schema: ListInputSchema,
 		run: async () => {
 			const result = await notesManager.listNotes();
 			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
@@ -264,7 +234,7 @@ export function createListNotes(
 			}
 			return result;
 		},
-	};
+	});
 }
 
 export const listNotes = createListNotes();
@@ -276,19 +246,13 @@ export type GetContentInput = z.infer<typeof GetContentInputSchema>;
 
 export function createGetNoteContent(
 	manager?: NotesManager,
-): RunnableTool<GetContentInput, string> {
+) {
 	const notesManager = manager || new NotesManager();
 
-	return {
-		tool: {
-			name: "getNoteContent",
-			description: "Get the content of a specific note by its title.",
-			input_schema: {
-				type: "object",
-				properties: { noteTitle: { type: "string" } },
-			},
-		},
-		input: GetContentInputSchema,
+	return createRunnableTool({
+		name: "getNoteContent",
+		description: "Get the content of a specific note by its title.",
+		schema: GetContentInputSchema,
 		run: async ({ noteTitle }) => {
 			const result = await notesManager.getNoteContent(noteTitle);
 			console.log(`Result: ${result ? "✓ Success" : "✗ Failed"}`);
@@ -298,7 +262,7 @@ export function createGetNoteContent(
 			}
 			return result;
 		},
-	};
+	});
 }
 
 export const getNoteContent = createGetNoteContent();
