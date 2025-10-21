@@ -8,11 +8,16 @@ const execAsync = promisify(exec);
 /**
  * Result from grep tool execution
  */
-interface GrepResult {
-	success: boolean;
-	content?: string;
-	error?: string;
-}
+type GrepResult =
+	| {
+			readonly success: true;
+			readonly content: string;
+			readonly error?: string;
+	  }
+	| {
+			readonly success: false;
+			readonly error: any;
+	  };
 
 /**
  * Zod schema for grep tool input parameters
@@ -155,12 +160,12 @@ function buildGrepCommand(input: GrepToolInput): string {
 /**
  * Grep tool for searching file contents using ripgrep
  */
-export const grepTool = createRunnableTool({
+export const grepTool = createRunnableTool<GrepToolInput, GrepResult>({
 	name: "grep",
 	description:
 		"Powerful search tool built on ripgrep for searching file contents with regular expressions. Supports filtering by file type, glob patterns, and various output modes.",
 	schema: GrepInputSchema,
-	run: async (input, output) => {
+	run: async (input, output): Promise<GrepResult> => {
 		try {
 			const command = buildGrepCommand(input);
 			output?.showDebug(`Executing: ${command}`);

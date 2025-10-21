@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
+import type { OutputHandler } from "../helpers/outputHandler.js";
 import { type GrepToolInput, grepTool } from "../tools/grepTool.js";
 
 /**
@@ -8,6 +9,19 @@ import { type GrepToolInput, grepTool } from "../tools/grepTool.js";
  * Note: These tests require ripgrep to be installed on the system.
  * Install via: brew install ripgrep (macOS), apt install ripgrep (Ubuntu), etc.
  */
+
+// Mock OutputHandler for tests
+const mockOutput: OutputHandler = {
+	startThinking: () => {},
+	stopThinking: () => {},
+	startTool: () => {},
+	stopTool: () => {},
+	showMessage: () => {},
+	showSuccess: () => {},
+	showError: () => {},
+	showDebug: () => {}, // Silenced in tests
+	showHelp: () => {},
+};
 
 describe("Grep Tool", () => {
 	// Check if ripgrep is available before running tests
@@ -21,7 +35,10 @@ describe("Grep Tool", () => {
 			await execAsync("which rg");
 			ripgrepAvailable = true;
 		} catch (_error) {
-			console.warn("⚠️  Ripgrep (rg) not found. Some tests will be skipped.");
+			mockOutput.showDebug(
+				"⚠️  Ripgrep (rg) not found. Some tests will be skipped.",
+				"warn",
+			);
 			ripgrepAvailable = false;
 		}
 	});
@@ -133,7 +150,7 @@ describe("Grep Tool", () => {
 	describe("Basic Search Functionality", () => {
 		it("should search for pattern in current directory", async () => {
 			if (!ripgrepAvailable) {
-				console.log("⊘ Skipping test: ripgrep not available");
+				mockOutput.showDebug("⊘ Skipping test: ripgrep not available");
 				return;
 			}
 
@@ -145,12 +162,14 @@ describe("Grep Tool", () => {
 			const result = await grepTool.run(input);
 
 			expect(result.success).toBe(true);
-			expect(result.content).toBeDefined();
+			if (result.success) {
+				expect(result.content).toBeDefined();
+			}
 		});
 
 		it("should return no matches found for non-existent pattern", async () => {
 			if (!ripgrepAvailable) {
-				console.log("⊘ Skipping test: ripgrep not available");
+				mockOutput.showDebug("⊘ Skipping test: ripgrep not available");
 				return;
 			}
 
@@ -162,12 +181,14 @@ describe("Grep Tool", () => {
 			const result = await grepTool.run(input);
 
 			expect(result.success).toBe(true);
-			expect(result.content).toContain("No matches found");
+			if (result.success) {
+				expect(result.content).toContain("No matches found");
+			}
 		});
 
 		it("should search in specific file", async () => {
 			if (!ripgrepAvailable) {
-				console.log("⊘ Skipping test: ripgrep not available");
+				mockOutput.showDebug("⊘ Skipping test: ripgrep not available");
 				return;
 			}
 
@@ -179,14 +200,16 @@ describe("Grep Tool", () => {
 			const result = await grepTool.run(input);
 
 			expect(result.success).toBe(true);
-			expect(result.content).toBeDefined();
+			if (result.success) {
+				expect(result.content).toBeDefined();
+			}
 		});
 	});
 
 	describe("Output Modes", () => {
 		it("should return file paths in files_with_matches mode", async () => {
 			if (!ripgrepAvailable) {
-				console.log("⊘ Skipping test: ripgrep not available");
+				mockOutput.showDebug("⊘ Skipping test: ripgrep not available");
 				return;
 			}
 
@@ -198,16 +221,18 @@ describe("Grep Tool", () => {
 			const result = await grepTool.run(input);
 
 			expect(result.success).toBe(true);
-			expect(result.content).toBeDefined();
-			// Should contain file paths
-			if (result.content && result.content !== "No matches found") {
-				expect(result.content).toMatch(/\.ts/);
+			if (result.success) {
+				expect(result.content).toBeDefined();
+				// Should contain file paths
+				if (result.content && result.content !== "No matches found") {
+					expect(result.content).toMatch(/\.ts/);
+				}
 			}
 		});
 
 		it("should return matching content in content mode", async () => {
 			if (!ripgrepAvailable) {
-				console.log("⊘ Skipping test: ripgrep not available");
+				mockOutput.showDebug("⊘ Skipping test: ripgrep not available");
 				return;
 			}
 
@@ -219,15 +244,17 @@ describe("Grep Tool", () => {
 			const result = await grepTool.run(input);
 
 			expect(result.success).toBe(true);
-			expect(result.content).toBeDefined();
-			if (result.content && result.content !== "No matches found") {
-				expect(result.content).toContain("GrepToolInput");
+			if (result.success) {
+				expect(result.content).toBeDefined();
+				if (result.content && result.content !== "No matches found") {
+					expect(result.content).toContain("GrepToolInput");
+				}
 			}
 		});
 
 		it("should return match counts in count mode", async () => {
 			if (!ripgrepAvailable) {
-				console.log("⊘ Skipping test: ripgrep not available");
+				mockOutput.showDebug("⊘ Skipping test: ripgrep not available");
 				return;
 			}
 
@@ -239,10 +266,12 @@ describe("Grep Tool", () => {
 			const result = await grepTool.run(input);
 
 			expect(result.success).toBe(true);
-			expect(result.content).toBeDefined();
-			// Should contain file path and count
-			if (result.content && result.content !== "No matches found") {
-				expect(result.content).toMatch(/\d+/);
+			if (result.success) {
+				expect(result.content).toBeDefined();
+				// Should contain file path and count
+				if (result.content && result.content !== "No matches found") {
+					expect(result.content).toMatch(/\d+/);
+				}
 			}
 		});
 	});
@@ -250,7 +279,7 @@ describe("Grep Tool", () => {
 	describe("File Filtering", () => {
 		it("should filter by file type", async () => {
 			if (!ripgrepAvailable) {
-				console.log("⊘ Skipping test: ripgrep not available");
+				mockOutput.showDebug("⊘ Skipping test: ripgrep not available");
 				return;
 			}
 
@@ -263,12 +292,14 @@ describe("Grep Tool", () => {
 			const result = await grepTool.run(input);
 
 			expect(result.success).toBe(true);
-			expect(result.content).toBeDefined();
+			if (result.success) {
+				expect(result.content).toBeDefined();
+			}
 		});
 
 		it("should filter by glob pattern", async () => {
 			if (!ripgrepAvailable) {
-				console.log("⊘ Skipping test: ripgrep not available");
+				mockOutput.showDebug("⊘ Skipping test: ripgrep not available");
 				return;
 			}
 
@@ -281,14 +312,16 @@ describe("Grep Tool", () => {
 			const result = await grepTool.run(input);
 
 			expect(result.success).toBe(true);
-			expect(result.content).toBeDefined();
+			if (result.success) {
+				expect(result.content).toBeDefined();
+			}
 		});
 	});
 
 	describe("Case Sensitivity", () => {
 		it("should perform case-sensitive search by default", async () => {
 			if (!ripgrepAvailable) {
-				console.log("⊘ Skipping test: ripgrep not available");
+				mockOutput.showDebug("⊘ Skipping test: ripgrep not available");
 				return;
 			}
 
@@ -301,12 +334,14 @@ describe("Grep Tool", () => {
 
 			// Should not find matches (case-sensitive)
 			expect(result.success).toBe(true);
-			expect(result.content).toContain("No matches found");
+			if (result.success) {
+				expect(result.content).toContain("No matches found");
+			}
 		});
 
 		it("should perform case-insensitive search with -i flag", async () => {
 			if (!ripgrepAvailable) {
-				console.log("⊘ Skipping test: ripgrep not available");
+				mockOutput.showDebug("⊘ Skipping test: ripgrep not available");
 				return;
 			}
 
@@ -320,7 +355,7 @@ describe("Grep Tool", () => {
 
 			// Should find matches (case-insensitive)
 			expect(result.success).toBe(true);
-			if (result.content) {
+			if (result.success && result.content) {
 				expect(result.content).not.toContain("No matches found");
 			}
 		});
@@ -329,7 +364,7 @@ describe("Grep Tool", () => {
 	describe("Context Lines", () => {
 		it("should show line numbers with -n flag", async () => {
 			if (!ripgrepAvailable) {
-				console.log("⊘ Skipping test: ripgrep not available");
+				mockOutput.showDebug("⊘ Skipping test: ripgrep not available");
 				return;
 			}
 
@@ -342,7 +377,11 @@ describe("Grep Tool", () => {
 			const result = await grepTool.run(input);
 
 			expect(result.success).toBe(true);
-			if (result.content && result.content !== "No matches found") {
+			if (
+				result.success &&
+				result.content &&
+				result.content !== "No matches found"
+			) {
 				// Should contain line numbers (format: filename:line:content)
 				expect(result.content).toMatch(/:\d+:/);
 			}
@@ -350,7 +389,7 @@ describe("Grep Tool", () => {
 
 		it("should show after context with -A flag", async () => {
 			if (!ripgrepAvailable) {
-				console.log("⊘ Skipping test: ripgrep not available");
+				mockOutput.showDebug("⊘ Skipping test: ripgrep not available");
 				return;
 			}
 
@@ -363,12 +402,14 @@ describe("Grep Tool", () => {
 			const result = await grepTool.run(input);
 
 			expect(result.success).toBe(true);
-			expect(result.content).toBeDefined();
+			if (result.success) {
+				expect(result.content).toBeDefined();
+			}
 		});
 
 		it("should show before context with -B flag", async () => {
 			if (!ripgrepAvailable) {
-				console.log("⊘ Skipping test: ripgrep not available");
+				mockOutput.showDebug("⊘ Skipping test: ripgrep not available");
 				return;
 			}
 
@@ -381,12 +422,14 @@ describe("Grep Tool", () => {
 			const result = await grepTool.run(input);
 
 			expect(result.success).toBe(true);
-			expect(result.content).toBeDefined();
+			if (result.success) {
+				expect(result.content).toBeDefined();
+			}
 		});
 
 		it("should show context lines with -C flag", async () => {
 			if (!ripgrepAvailable) {
-				console.log("⊘ Skipping test: ripgrep not available");
+				mockOutput.showDebug("⊘ Skipping test: ripgrep not available");
 				return;
 			}
 
@@ -399,14 +442,16 @@ describe("Grep Tool", () => {
 			const result = await grepTool.run(input);
 
 			expect(result.success).toBe(true);
-			expect(result.content).toBeDefined();
+			if (result.success) {
+				expect(result.content).toBeDefined();
+			}
 		});
 	});
 
 	describe("Multiline Mode", () => {
 		it("should search across multiple lines with multiline flag", async () => {
 			if (!ripgrepAvailable) {
-				console.log("⊘ Skipping test: ripgrep not available");
+				mockOutput.showDebug("⊘ Skipping test: ripgrep not available");
 				return;
 			}
 
@@ -419,14 +464,16 @@ describe("Grep Tool", () => {
 			const result = await grepTool.run(input);
 
 			expect(result.success).toBe(true);
-			expect(result.content).toBeDefined();
+			if (result.success) {
+				expect(result.content).toBeDefined();
+			}
 		});
 	});
 
 	describe("Output Limiting", () => {
 		it("should limit output with head_limit", async () => {
 			if (!ripgrepAvailable) {
-				console.log("⊘ Skipping test: ripgrep not available");
+				mockOutput.showDebug("⊘ Skipping test: ripgrep not available");
 				return;
 			}
 
@@ -439,10 +486,12 @@ describe("Grep Tool", () => {
 			const result = await grepTool.run(input);
 
 			expect(result.success).toBe(true);
-			expect(result.content).toBeDefined();
-			if (result.content && result.content !== "No matches found") {
-				const lines = result.content.split("\n").filter((l) => l.trim());
-				expect(lines.length).toBeLessThanOrEqual(5);
+			if (result.success) {
+				expect(result.content).toBeDefined();
+				if (result.content && result.content !== "No matches found") {
+					const lines = result.content.split("\n").filter((l) => l.trim());
+					expect(lines.length).toBeLessThanOrEqual(5);
+				}
 			}
 		});
 	});
@@ -450,7 +499,7 @@ describe("Grep Tool", () => {
 	describe("Error Handling", () => {
 		it("should handle non-existent path gracefully", async () => {
 			if (!ripgrepAvailable) {
-				console.log("⊘ Skipping test: ripgrep not available");
+				mockOutput.showDebug("⊘ Skipping test: ripgrep not available");
 				return;
 			}
 
@@ -467,7 +516,7 @@ describe("Grep Tool", () => {
 
 		it("should handle invalid regex pattern", async () => {
 			if (!ripgrepAvailable) {
-				console.log("⊘ Skipping test: ripgrep not available");
+				mockOutput.showDebug("⊘ Skipping test: ripgrep not available");
 				return;
 			}
 
@@ -492,16 +541,18 @@ describe("Grep Tool", () => {
 			const result = await grepTool.run(input);
 			expect(result).toHaveProperty("success");
 			// Result should have either content or error
-			expect(result.content !== undefined || result.error !== undefined).toBe(
-				true,
-			);
+			if (result.success) {
+				expect(result.content).toBeDefined();
+			} else {
+				expect(result.error).toBeDefined();
+			}
 		});
 	});
 
 	describe("Regular Expression Support", () => {
 		it("should support basic regex patterns", async () => {
 			if (!ripgrepAvailable) {
-				console.log("⊘ Skipping test: ripgrep not available");
+				mockOutput.showDebug("⊘ Skipping test: ripgrep not available");
 				return;
 			}
 
@@ -513,12 +564,14 @@ describe("Grep Tool", () => {
 			const result = await grepTool.run(input);
 
 			expect(result.success).toBe(true);
-			expect(result.content).toBeDefined();
+			if (result.success) {
+				expect(result.content).toBeDefined();
+			}
 		});
 
 		it("should support character classes", async () => {
 			if (!ripgrepAvailable) {
-				console.log("⊘ Skipping test: ripgrep not available");
+				mockOutput.showDebug("⊘ Skipping test: ripgrep not available");
 				return;
 			}
 
@@ -530,12 +583,14 @@ describe("Grep Tool", () => {
 			const result = await grepTool.run(input);
 
 			expect(result.success).toBe(true);
-			expect(result.content).toBeDefined();
+			if (result.success) {
+				expect(result.content).toBeDefined();
+			}
 		});
 
 		it("should support word boundaries", async () => {
 			if (!ripgrepAvailable) {
-				console.log("⊘ Skipping test: ripgrep not available");
+				mockOutput.showDebug("⊘ Skipping test: ripgrep not available");
 				return;
 			}
 
@@ -548,7 +603,9 @@ describe("Grep Tool", () => {
 			const result = await grepTool.run(input);
 
 			expect(result.success).toBe(true);
-			expect(result.content).toBeDefined();
+			if (result.success) {
+				expect(result.content).toBeDefined();
+			}
 		});
 	});
 
