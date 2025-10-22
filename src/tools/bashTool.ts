@@ -105,6 +105,7 @@ async function handleBashCommand(toolCall: BashToolInput): Promise<BashResult> {
 			env: sessionEnvVars,
 			timeout: 30000, // 30 second timeout
 			maxBuffer: 1024 * 1024 * 10, // 10MB buffer
+			shell: "/bin/bash", // Use bash explicitly for brace expansion and other bash features
 		});
 
 		// Update session state if the command changes directory or environment

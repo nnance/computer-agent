@@ -109,6 +109,7 @@ function buildGrepCommand(input: GrepToolInput): string {
 	// Line numbers (only for content mode)
 	if (input["-n"] && input.output_mode === "content") {
 		args.push("--line-number");
+		args.push("--with-filename");
 	}
 
 	// Context lines (only for content mode)
@@ -138,8 +139,9 @@ function buildGrepCommand(input: GrepToolInput): string {
 		args.push(`--glob=${input.glob}`);
 	}
 
-	// Add the pattern (properly escaped)
-	args.push(input.pattern);
+	// Add the pattern (properly escaped for shell)
+	// Use single quotes to prevent shell interpretation
+	args.push(`'${input.pattern.replace(/'/g, "'\\''")}'`);
 
 	// Add path if specified
 	if (input.path) {

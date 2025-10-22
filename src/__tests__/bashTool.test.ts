@@ -222,6 +222,10 @@ describe("Bash Tool", () => {
 		});
 
 		it("should reset working directory on restart", async () => {
+			// Get initial directory
+			const initialPwd = await bashTool.run({ command: "pwd" });
+			const initialDir = initialPwd.stdout;
+
 			// Change directory
 			await bashTool.run({ command: "cd /tmp" });
 
@@ -231,7 +235,7 @@ describe("Bash Tool", () => {
 			// Verify directory is reset to project directory
 			const pwdResult = await bashTool.run({ command: "pwd" });
 			expect(pwdResult.stdout).not.toBe("/tmp");
-			expect(pwdResult.stdout).toContain("computer-agent");
+			expect(pwdResult.stdout).toBe(initialDir);
 		});
 
 		it("should reset environment variables on restart", async () => {

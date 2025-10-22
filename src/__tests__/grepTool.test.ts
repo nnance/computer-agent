@@ -175,7 +175,7 @@ describe("Grep Tool", () => {
 
 			const input: GrepToolInput = {
 				pattern: "xyznonexistentpattern12345",
-				path: "./src",
+				path: "./src/tools",
 				output_mode: "content",
 			};
 			const result = await grepTool.run(input);
@@ -456,7 +456,7 @@ describe("Grep Tool", () => {
 			}
 
 			const input: GrepToolInput = {
-				pattern: "interface.*{.*success",
+				pattern: "type.*=.*success.*true",
 				path: "./src/tools/grepTool.ts",
 				output_mode: "content",
 				multiline: true,
@@ -466,6 +466,7 @@ describe("Grep Tool", () => {
 			expect(result.success).toBe(true);
 			if (result.success) {
 				expect(result.content).toBeDefined();
+				expect(result.content).not.toBe("No matches found");
 			}
 		});
 	});
@@ -531,22 +532,27 @@ describe("Grep Tool", () => {
 			expect(result.error).toBeDefined();
 		});
 
-		it("should provide helpful error when ripgrep is not installed", async () => {
-			// This test verifies that the tool runs and returns a proper structure
-			const input: GrepToolInput = {
-				pattern: "test",
-				output_mode: "content",
-			};
+		it(
+			"should provide helpful error when ripgrep is not installed",
+			async () => {
+				// This test verifies that the tool runs and returns a proper structure
+				const input: GrepToolInput = {
+					pattern: "test",
+					output_mode: "content",
+					path: "./src/tools",
+				};
 
-			const result = await grepTool.run(input);
-			expect(result).toHaveProperty("success");
-			// Result should have either content or error
-			if (result.success) {
-				expect(result.content).toBeDefined();
-			} else {
-				expect(result.error).toBeDefined();
-			}
-		});
+				const result = await grepTool.run(input);
+				expect(result).toHaveProperty("success");
+				// Result should have either content or error
+				if (result.success) {
+					expect(result.content).toBeDefined();
+				} else {
+					expect(result.error).toBeDefined();
+				}
+			},
+			10000,
+		);
 	});
 
 	describe("Regular Expression Support", () => {

@@ -16,7 +16,7 @@ Minor improvements and bug fixes that enhance the current functionality.
 [x] **Helper Functions**: Move parseArgs, output handler, and tool runner to separate modules in the helpers directory
 [x] **Output Handling**: Improve output handling for better formatting and readability for non-interactive mode
 [ ] **Logging**: Implement structured logging system
-[ ] **Output Logging**: Remove hardcoded console logs and replace with a configurable logging system
+[x] **Output Logging**: Remove hardcoded console logs and replace with a configurable logging system
 [x] **System Prompt**: Improve the default location of the system prompt and make it more customizable
 [x] **Testing Infrastructure**: Add comprehensive test suite
 [ ] **Error Handling**: More robust error handling and user feedback

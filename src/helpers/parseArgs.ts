@@ -37,7 +37,7 @@ export function parseArgs(args: string[]): ParsedArgs {
 				result.message = nextArg;
 				i++; // Skip next argument as we've consumed it
 			} else {
-				throw new Error(`${arg} requires a non-empty message argument`);
+				throw new Error(`${arg} requires a message argument`);
 			}
 		} else if (arg === "--format") {
 			const nextArg = args[i + 1];
